@@ -22,9 +22,27 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/usix-labs/usix-axon/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFCNzI4OUQ1QzA0RTEyNUUKUldSZUVrN0ExWWx5Ry9kbFdsMnRxUm1EM08rNzg2ZW1sR3R4TTZESGFycmpRVkkrdjJQczBoaWwK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["deb", "appimage", "nsis"],
-    "icon": []
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ]
   }
 }

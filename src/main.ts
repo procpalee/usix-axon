@@ -8,6 +8,7 @@ import { initDartView } from "./dart-view";
 import { initLedgerView } from "./ledger-view";
 import { initDaemonSettings, refreshDaemon, refreshMe } from "./daemon-settings";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { checkForUpdates } from "./updater";
 import "./chat";
 
 const LEGAL_BASE = "https://propsol.co.kr";
@@ -72,3 +73,4 @@ initDartView();
 initLedgerView();
 initDaemonSettings(() => tr("btnClose"));
 checkTerms();
+void checkForUpdates();
