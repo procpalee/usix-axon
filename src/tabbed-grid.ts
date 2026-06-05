@@ -39,7 +39,10 @@ export function initTabbedGrid(tabBar: HTMLElement, gridArea: HTMLElement): TabM
 
   function renderGrid(): void {
     if (activeIdx < 0 || activeIdx >= tabs.length) {
-      gridArea.innerHTML = '<p class="placeholder">CSV·Excel 파일을 열어 원장 분석을 시작하세요.</p>';
+      const p = document.createElement("p");
+      p.className = "placeholder";
+      p.textContent = "CSV·Excel 파일을 열어 원장 분석을 시작하세요.";
+      gridArea.replaceChildren(p);
       return;
     }
     gridArea.replaceChildren(renderTable(tabs[activeIdx].table));

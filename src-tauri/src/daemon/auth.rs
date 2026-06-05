@@ -17,6 +17,8 @@ pub async fn daemon_login() -> Result<(), String> {
     let base = config::get_daemon_url()?;
     let http = reqwest::Client::builder()
         .user_agent("axon/0.1")
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(30))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -81,6 +83,9 @@ pub fn daemon_logout() -> Result<(), String> {
 /// 시스템 기본 브라우저로 URL 열기. Tauri IPC 가 아니라 OS 프로세스 직접 spawn(`exec.rs` 선례)
 /// → capability 불요. 실패는 무시 — 사용자가 콘솔의 URL 을 직접 열 여지를 남긴다.
 fn open_browser(url: &str) {
+    if !url.starts_with("https://") {
+        return;
+    }
     let _ = {
         #[cfg(target_os = "windows")]
         {

@@ -287,7 +287,14 @@ export function initDartView(): void {
     if (e.payload === `chart-${chartSel.corp}`) void emitTo(e.payload, "chart-set", chartSel.series);
   });
 
-  $("#fetch").addEventListener("click", async () => {
+  const fetchBtn = $("#fetch");
+  for (const sel of ["#corp-code", "#year-start", "#year-end", "#dart-basis", "#dart-reprt"]) {
+    $(sel).addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "Enter") fetchBtn.click();
+    });
+  }
+
+  fetchBtn.addEventListener("click", async () => {
     const corp = corpCode.value.trim();
     const start = parseInt($<HTMLInputElement>("#year-start").value.trim(), 10);
     const end = parseInt($<HTMLInputElement>("#year-end").value.trim(), 10);

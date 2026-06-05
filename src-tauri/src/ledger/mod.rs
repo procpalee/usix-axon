@@ -19,6 +19,8 @@ pub struct LedgerState {
 #[derive(Serialize, Clone)]
 pub struct Preview {
     rows: Vec<Vec<String>>,
+    tail_rows: Vec<Vec<String>>,
+    tail_start: usize,
     total: usize,
 }
 
@@ -59,9 +61,13 @@ pub fn open_and_import<R: Runtime>(app: &AppHandle<R>) {
                 .and_then(|bytes| axon_ledger::read_grid(bytes, is_xlsx));
             match grid {
                 Ok(g) => {
+                    let len = g.len();
+                    let ts = len.saturating_sub(PREVIEW_ROWS);
                     let preview = Preview {
                         rows: g.iter().take(PREVIEW_ROWS).cloned().collect(),
-                        total: g.len(),
+                        tail_rows: g[ts..].to_vec(),
+                        tail_start: ts,
+                        total: len,
                     };
                     if let Ok(mut guard) = handle.state::<LedgerState>().grid.lock() {
                         *guard = Some(g);
@@ -83,12 +89,13 @@ pub fn ledger_open(app: AppHandle) {
 #[tauri::command]
 pub fn ledger_import(
     header_row: usize,
+    end_row: Option<usize>,
     columns: Option<Vec<usize>>,
     state: State<LedgerState>,
 ) -> Result<ImportResult, String> {
     let grid_guard = state.grid.lock().map_err(|_| "상태 잠금 실패".to_string())?;
     let grid = grid_guard.as_ref().ok_or_else(|| "먼저 파일을 여세요.".to_string())?;
-    let df = axon_ledger::import_grid(grid, header_row, columns.as_deref())?;
+    let df = axon_ledger::import_grid(grid, header_row, end_row, columns.as_deref())?;
     let table = axon_ledger::to_table(&df);
     let mut store = state.store.lock().map_err(|_| "상태 잠금 실패".to_string())?;
     let dataset_id = store.insert("임포트".to_string(), df, None);
@@ -99,9 +106,13 @@ pub fn ledger_import(
 pub fn ledger_preview(state: State<LedgerState>) -> Result<Preview, String> {
     let guard = state.grid.lock().map_err(|_| "상태 잠금 실패".to_string())?;
     let grid = guard.as_ref().ok_or_else(|| "먼저 파일을 여세요.".to_string())?;
+    let len = grid.len();
+    let tail_start = len.saturating_sub(PREVIEW_ROWS);
     Ok(Preview {
         rows: grid.iter().take(PREVIEW_ROWS).cloned().collect(),
-        total: grid.len(),
+        tail_rows: grid[tail_start..].to_vec(),
+        tail_start,
+        total: len,
     })
 }
 

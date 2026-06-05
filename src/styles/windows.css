@@ -20,6 +20,7 @@
 
 /* 데이터 가져오기 위저드 */
 .wizard-window { height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; background: var(--main); }
+#wizard-root { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .wizard-toolbar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3); border-bottom: 1px solid var(--border); background: var(--sidebar); flex-shrink: 0; }
 .wizard-toolbar label { font-size: var(--fs-md); color: var(--text); white-space: nowrap; }
 .wizard-toolbar input[type="number"] { width: 56px; padding: var(--sp-1) var(--sp-2); background: var(--input); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: var(--fs-md); text-align: center; }
@@ -33,8 +34,13 @@
 .wizard-grid thead th { background: var(--activity); position: sticky; top: 0; z-index: 1; text-align: center; font-weight: normal; }
 .wizard-grid thead th:first-child { min-width: 40px; text-align: center; }
 .wizard-grid td:first-child { text-align: center; color: var(--text-dim); font-size: var(--fs-sm); min-width: 40px; }
+.wizard-btn-back { background: var(--sidebar) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
+.wizard-btn-back:hover { background: var(--border) !important; }
 .wizard-grid tr.wizard-header-row td { background: var(--accent); color: #fff; font-weight: 600; }
 .wizard-grid tr.wizard-header-row td:first-child { background: var(--accent); color: #fff; }
+.wizard-grid tr.wizard-end-row td { background: #b45309; color: #fff; font-weight: 600; }
+.wizard-grid tr.wizard-end-row td:first-child { background: #b45309; color: #fff; }
+.wizard-grid tr.wizard-excluded td { opacity: .3; text-decoration: line-through; }
 .wizard-grid input[type="checkbox"] { cursor: pointer; }
 
 /* 재무제표 전용 창 */

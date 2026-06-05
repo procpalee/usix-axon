@@ -6,6 +6,8 @@ export interface Table {
 
 export interface Preview {
   rows: string[][];
+  tail_rows: string[][];
+  tail_start: number;
   total: number;
 }
 

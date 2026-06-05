@@ -99,7 +99,7 @@ pub fn export_pdf(table: &Table, meta: &[(String, String)]) -> Result<Vec<u8>, S
         layer.use_text("axon", META_TITLE_PT, Mm(MARGIN), Mm(y), &font_bold);
         y -= 6.0;
         for (k, v) in meta {
-            layer.use_text(&format!("{k}: {v}"), META_PT, Mm(MARGIN), Mm(y), &font);
+            layer.use_text(format!("{k}: {v}"), META_PT, Mm(MARGIN), Mm(y), &font);
             y -= META_LINE_H;
         }
         y -= 3.0;
@@ -120,7 +120,7 @@ pub fn export_pdf(table: &Table, meta: &[(String, String)]) -> Result<Vec<u8>, S
         for (c, cell) in row.iter().enumerate() {
             let cw = widths.get(c).copied().unwrap_or(10.0);
             let mc = max_chars(cw, BODY_PT);
-            layer.use_text(&truncate(cell, mc), BODY_PT, Mm(x), Mm(y), &font);
+            layer.use_text(truncate(cell, mc), BODY_PT, Mm(x), Mm(y), &font);
             x += cw;
         }
         y -= ROW_H;
@@ -140,7 +140,7 @@ fn write_headers(
     for (c, h) in headers.iter().enumerate() {
         let cw = widths.get(c).copied().unwrap_or(10.0);
         let mc = max_chars(cw, HDR_PT);
-        layer.use_text(&truncate(h, mc), HDR_PT, Mm(x), Mm(y), font);
+        layer.use_text(truncate(h, mc), HDR_PT, Mm(x), Mm(y), font);
         x += cw;
     }
 }

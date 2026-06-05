@@ -7,6 +7,8 @@
 //!   POST /api/v1/sessions/{id}/permission   {call_id,approved}
 //!   POST /api/v1/sessions/{id}/interrupt    진행 중 턴 취소
 
+use std::time::Duration;
+
 use super::config;
 
 pub struct DaemonClient {
@@ -21,6 +23,7 @@ impl DaemonClient {
         let base = config::get_daemon_url()?;
         let http = reqwest::Client::builder()
             .user_agent("axon/0.1")
+            .connect_timeout(Duration::from_secs(10))
             .build()
             .map_err(|e| e.to_string())?;
         Ok(Self {
@@ -37,8 +40,15 @@ impl DaemonClient {
         }
     }
 
-    fn url(&self, sid: &str, suffix: &str) -> String {
-        format!("{}/api/v1/sessions/{}/{}", self.base, sid, suffix)
+    fn url(&self, sid: &str, suffix: &str) -> Result<String, String> {
+        if sid.is_empty()
+            || !sid
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+        {
+            return Err("잘못된 세션 ID".into());
+        }
+        Ok(format!("{}/api/v1/sessions/{}/{}", self.base, sid, suffix))
     }
 
     /// 세션 이벤트 SSE 스트림을 연다. Last-Event-ID 로 재연결 가능.
@@ -49,7 +59,7 @@ impl DaemonClient {
     ) -> Result<reqwest::Response, String> {
         let mut rb = self
             .http
-            .get(self.url(sid, "events"))
+            .get(self.url(sid, "events")?)
             .header("Accept", "text/event-stream");
         if let Some(s) = last_seq {
             rb = rb.header("Last-Event-ID", s.to_string());
@@ -63,7 +73,7 @@ impl DaemonClient {
 
     /// 사용자 입력을 턴으로 발사한다. 즉시 request_id 반환(처리는 SSE 로 흘러나옴).
     pub async fn reply(&self, sid: &str, content: &str, thinking: bool) -> Result<String, String> {
-        let rb = self.http.post(self.url(sid, "reply")).json(&serde_json::json!({
+        let rb = self.http.post(self.url(sid, "reply")?).json(&serde_json::json!({
             "content": content,
             "thinking": thinking,
         }));
@@ -83,7 +93,7 @@ impl DaemonClient {
         output: &str,
         success: bool,
     ) -> Result<(), String> {
-        let rb = self.http.post(self.url(sid, "tool-result")).json(&serde_json::json!({
+        let rb = self.http.post(self.url(sid, "tool-result")?).json(&serde_json::json!({
             "call_id": call_id,
             "output": output,
             "success": success,
@@ -93,7 +103,7 @@ impl DaemonClient {
     }
 
     pub async fn permission(&self, sid: &str, call_id: &str, approved: bool) -> Result<(), String> {
-        let rb = self.http.post(self.url(sid, "permission")).json(&serde_json::json!({
+        let rb = self.http.post(self.url(sid, "permission")?).json(&serde_json::json!({
             "call_id": call_id,
             "approved": approved,
         }));
@@ -103,7 +113,7 @@ impl DaemonClient {
 
     /// 진행 중 턴 취소 (Ctrl+C / Stop 버튼).
     pub async fn interrupt(&self, sid: &str) -> Result<(), String> {
-        let rb = self.http.post(self.url(sid, "interrupt"));
+        let rb = self.http.post(self.url(sid, "interrupt")?);
         self.auth(rb).send().await.map_err(|e| e.to_string())?;
         Ok(())
     }

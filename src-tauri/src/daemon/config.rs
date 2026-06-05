@@ -27,8 +27,20 @@ pub(crate) fn token() -> Option<String> {
 #[tauri::command]
 pub fn save_daemon_url(url: String) -> Result<(), String> {
     let url = url.trim().trim_end_matches('/').to_string();
-    if !(url.starts_with("http://") || url.starts_with("https://")) {
-        return Err("URL 은 http:// 또는 https:// 로 시작해야 합니다.".into());
+    if let Some(rest) = url.strip_prefix("http://") {
+        let authority = rest.split('/').next().unwrap_or("");
+        let is_loopback = authority == "localhost"
+            || authority.starts_with("localhost:")
+            || authority == "127.0.0.1"
+            || authority.starts_with("127.0.0.1:")
+            || authority.starts_with("[::1]");
+        if !is_loopback {
+            return Err(
+                "평문 HTTP 는 localhost 만 허용 — 원격 데몬은 https:// 를 사용하세요.".into(),
+            );
+        }
+    } else if !url.starts_with("https://") {
+        return Err("URL 은 https:// 로 시작해야 합니다 (localhost 한정 http:// 허용).".into());
     }
     entry(URL_KEY)
         .and_then(|e| e.set_password(&url))
@@ -110,6 +122,8 @@ pub async fn ping_daemon() -> Result<String, String> {
     let base = get_daemon_url()?;
     let client = reqwest::Client::builder()
         .user_agent("axon/0.1")
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| e.to_string())?;
     let mut rb = client.get(format!("{base}/status"));

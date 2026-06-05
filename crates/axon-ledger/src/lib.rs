@@ -64,22 +64,28 @@ fn cell_to_string(d: &Data) -> String {
     }
 }
 
-/// 그리드 + 기준 헤더행 + 컬럼선택 → DataFrame. header_row 행을 컬럼명으로, 그 아래를 데이터로.
-/// columns=None 이면 전체. (선택 영역을 CSV 로 재직렬화 → 폴라스 타입추론 재사용.)
+/// 그리드 + 기준 헤더행 + 끝행 + 컬럼선택 → DataFrame.
+/// header_row 행을 컬럼명으로, 그 다음 행부터 end_row(포함)까지를 데이터로.
+/// end_row=None 이면 마지막 행까지. columns=None 이면 전체 열.
 pub fn import_grid(
     grid: &[Vec<String>],
     header_row: usize,
+    end_row: Option<usize>,
     columns: Option<&[usize]>,
 ) -> Result<DataFrame, String> {
     let header = grid
         .get(header_row)
         .ok_or_else(|| "헤더 행 번호가 범위를 벗어났습니다.".to_string())?;
+    let last = end_row.unwrap_or(grid.len() - 1);
+    if last < header_row || last >= grid.len() {
+        return Err("끝 행 번호가 범위를 벗어났습니다.".to_string());
+    }
     let cols: Vec<usize> = match columns {
         Some(c) => c.to_vec(),
         None => (0..header.len()).collect(),
     };
     let mut wtr = Writer::from_writer(Vec::new());
-    for row in &grid[header_row..] {
+    for row in &grid[header_row..=last] {
         let rec: Vec<&str> = cols
             .iter()
             .map(|&i| row.get(i).map(String::as_str).unwrap_or(""))
@@ -215,11 +221,25 @@ mod tests {
             vec!["2".into(), "매출".into(), "200".into()],
         ];
         // 헤더=2행, 컬럼 0·2만(전표·금액).
-        let df = import_grid(&grid, 2, Some(&[0, 2])).unwrap();
+        let df = import_grid(&grid, 2, None, Some(&[0, 2])).unwrap();
         let t = to_table(&df);
         assert_eq!(t.headers, vec!["전표", "금액"]);
         assert_eq!(df.height(), 2);
         assert_eq!(t.rows[0], vec!["1", "100"]);
+    }
+
+    #[test]
+    fn import_grid_end_row_excludes_footer() {
+        let grid = vec![
+            vec!["No".into(), "금액".into()],
+            vec!["1".into(), "100".into()],
+            vec!["2".into(), "200".into()],
+            vec!["합계".into(), "300".into()],
+        ];
+        let df = import_grid(&grid, 0, Some(2), None).unwrap();
+        assert_eq!(df.height(), 2); // 헤더 + 데이터2행, 합계행 제외
+        let t = to_table(&df);
+        assert_eq!(t.rows[1], vec!["2", "200"]);
     }
 
     #[test]
