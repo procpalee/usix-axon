@@ -81,6 +81,14 @@ function renderWizard(pv: Preview): void {
   highlightHeader();
   hr.addEventListener("input", highlightHeader);
 
+  bodyRows.forEach((tr, i) => {
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", () => {
+      hr.value = String(i + 1);
+      highlightHeader();
+    });
+  });
+
   go.onclick = async () => {
     const headerRow = (parseInt(hr.value, 10) || 1) - 1;
     const columns = checks.map((cb, i) => (cb.checked ? i : -1)).filter((i) => i >= 0);
