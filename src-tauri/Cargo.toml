@@ -1,0 +1,43 @@
+[package]
+name = "axon"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+# Tauri 2.x 관례: 로직은 lib(run), main.rs 는 그걸 호출만 → 모바일 타깃과 공유 가능.
+name = "axon_lib"
+crate-type = ["lib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+axon-core = { path = "../crates/axon-core" }   # 어댑터 → 코어 (의존 방향 한쪽)
+axon-ledger = { path = "../crates/axon-ledger" }   # 원장/감사 분석 엔진 (폴라스, 데스크톱 전용)
+# OpenDART HTTP. rustls-platform-verifier 가 이 환경서 TLS 초기화 실패 → 시스템 openssl(native-tls)로.
+# "stream" = 데몬 SSE 바이트 스트림 소비 (daemon/turn.rs).
+reqwest = { version = "0.13", default-features = false, features = ["json", "query", "native-tls", "stream"] }
+futures-util = "0.3"   # SSE 바이트 스트림 .next() (StreamExt)
+tokio = { version = "1", features = ["time"] }   # auth-broker poll 간격 sleep
+zip = { version = "7", default-features = false, features = ["deflate"] }   # corpCode.xml ZIP 해제
+quick-xml = "0.40"     # CORPCODE.xml 파싱
+rust_xlsxwriter = "0.95.0"
+printpdf = "0.7"
+tauri-plugin-dialog = "2.7.1"
+tauri-plugin-opener = "2"
+base64 = "0.22.1"
+
+# OS 키체인 (OpenDART 키 보관) — 플랫폼별 백엔드
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
+
+[lints]
+workspace = true

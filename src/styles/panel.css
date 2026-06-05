@@ -1,0 +1,36 @@
+/* 우측 작업 패널 (VS Code 식 도크) */
+.panel { grid-area: 1 / 4; position: relative; width: var(--panel-w, 360px); min-width: 0; min-height: 0; overflow: hidden; background: var(--sidebar); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+.panel.hidden { display: none; }
+.panel-resize { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; cursor: ew-resize; z-index: var(--z-panel-resize); }
+.panel-resize:hover { background: var(--accent); }
+.panel-header { display: flex; align-items: center; gap: 6px; padding: 2px var(--sp-2); border-bottom: 1px solid var(--border); background: var(--activity); flex-shrink: 0; }
+.panel-tabs { display: flex; gap: 2px; }
+.panel-tab { background: none; border: none; color: var(--text-dim); padding: 5px var(--sp-3); font-size: var(--fs-base); cursor: pointer; border-bottom: 2px solid transparent; }
+.panel-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.panel-tab:disabled { opacity: .4; cursor: default; }
+.panel-header .spacer { flex: 1; }
+.panel-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: var(--fs-base); padding: var(--sp-1) var(--sp-2); border-radius: var(--radius-sm); }
+.panel-btn:hover { background: var(--input); color: var(--text); }
+.panel-body { flex: 1; min-height: 0; overflow: hidden; }
+
+/* 채팅 */
+.chat-view { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.chat-log { flex: 1; min-height: 0; padding: var(--sp-4); overflow: auto; }
+.chat-input { border-top: 1px solid var(--border); padding: 10px; position: relative; }
+.chat-input textarea { width: 100%; background: var(--input); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 6px var(--sp-2); resize: none; min-height: 46px; max-height: 140px; overflow-y: auto; font-family: inherit; font-size: var(--fs-md); box-sizing: border-box; }
+.chat-actions { display: flex; gap: 6px; margin-top: 6px; }
+.chat-actions button { padding: 5px 14px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: var(--fs-base); }
+.chat-actions button:hover { background: var(--accent-h); }
+.chat-jump { position: absolute; top: -42px; right: var(--sp-3); width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; border: 1px solid var(--border); cursor: pointer; font-size: var(--fs-md); line-height: 1; box-shadow: var(--shadow-sm); }
+.chat-jump:hover { background: var(--accent-h); }
+.chat-jump[hidden] { display: none; }
+.chat-retry { display: block; margin-top: 6px; padding: var(--radius-sm) 10px; background: transparent; color: var(--err); border: 1px solid var(--err); border-radius: var(--radius-sm); cursor: pointer; font-size: var(--fs-base); }
+.chat-retry:hover { background: var(--err); color: #fff; }
+
+/* 버블 */
+.bubble { margin: 6px 0; padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-lg); font-size: var(--fs-md); line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+.bubble.user { background: var(--accent); color: #fff; margin-left: 18%; }
+.bubble.assistant { background: var(--sidebar); }
+.bubble.think, .bubble.tool { background: transparent; color: var(--text-dim); font-size: var(--fs-base); padding: 2px var(--sp-3); }
+.bubble.think { font-style: italic; }
+.bubble.error { color: var(--err); }

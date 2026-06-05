@@ -1,0 +1,13 @@
+:root,
+body[data-theme="light"] {
+  --bg: #ffffff;        --sidebar: #f3f3f3;   --activity: #dcdcdc;  --main: #ffffff;
+  --text: #1f1f1f;      --text-dim: #6b6b6b;  --border: #dddddd;    --input: #ffffff;
+  --accent: #0066b8;    --accent-h: #005299;  --status: #0066b8;    --status-text: #ffffff;
+  --err: #c72e2e;       --ok: #1a7f37;
+}
+body[data-theme="dark"] {
+  --bg: #1e1e1e;        --sidebar: #252526;   --activity: #333333;  --main: #1e1e1e;
+  --text: #cccccc;      --text-dim: #888888;  --border: #3c3c3c;    --input: #3c3c3c;
+  --accent: #0e639c;    --accent-h: #1177bb;  --status: #007acc;    --status-text: #ffffff;
+  --err: #f48771;       --ok: #89d185;
+}

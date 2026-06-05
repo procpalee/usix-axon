@@ -1,0 +1,42 @@
+/* 연도별 추세 그래프 (의존 0 SVG) */
+.chart { width: 100%; max-width: 760px; height: auto; background: var(--sidebar); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.chart-window { padding: var(--sp-4); height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; background: var(--main); }
+.chart-window .chart { max-width: 100%; }
+.chart-toolbar { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.chart-toolbar button.active { background: var(--accent); color: #fff; }
+.chart-title { fill: var(--text); font-size: 14px; font-weight: 600; }
+.chart-line { fill: none; stroke: var(--accent); stroke-width: 2; }
+.chart-dot { fill: var(--accent); }
+.chart-zero { stroke: var(--text-dim); stroke-dasharray: 4 3; }
+.chart-xlabel { fill: var(--text-dim); font-size: var(--fs-sm); }
+.chart-vlabel { fill: var(--text); font-size: var(--fs-xs); }
+.chart-empty { fill: var(--text-dim); font-size: var(--fs-md); }
+.chart-legend { fill: var(--text); font-size: var(--fs-sm); }
+
+/* 회사 검색 전용 창 */
+.search-window { padding: var(--sp-3); height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; }
+.search-window > input { width: 100%; padding: var(--sp-2); background: var(--input); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-md); box-sizing: border-box; font-size: var(--fs-md); }
+.search-window .corp-results { flex: 1; margin-top: var(--sp-2); max-height: none; }
+
+/* 데이터 가져오기 위저드 */
+.wizard-window { height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; background: var(--main); }
+.wizard-toolbar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3); border-bottom: 1px solid var(--border); background: var(--sidebar); flex-shrink: 0; }
+.wizard-toolbar label { font-size: var(--fs-md); color: var(--text); white-space: nowrap; }
+.wizard-toolbar input[type="number"] { width: 56px; padding: var(--sp-1) var(--sp-2); background: var(--input); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: var(--fs-md); text-align: center; }
+.wizard-toolbar .wizard-info { font-size: var(--fs-sm); color: var(--text-dim); margin-left: auto; }
+.wizard-toolbar button { padding: 6px var(--sp-4); background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: var(--fs-md); font-weight: 600; }
+.wizard-toolbar button:hover { background: var(--accent-h); }
+.wizard-toolbar button:disabled { opacity: .5; cursor: default; }
+.wizard-grid { flex: 1; overflow: auto; padding: 0; }
+.wizard-grid table { border-collapse: collapse; width: max-content; min-width: 100%; font-size: var(--fs-base); }
+.wizard-grid th, .wizard-grid td { border: 1px solid var(--border); padding: var(--sp-1) var(--sp-2); text-align: left; white-space: nowrap; }
+.wizard-grid thead th { background: var(--activity); position: sticky; top: 0; z-index: 1; text-align: center; font-weight: normal; }
+.wizard-grid thead th:first-child { min-width: 40px; text-align: center; }
+.wizard-grid td:first-child { text-align: center; color: var(--text-dim); font-size: var(--fs-sm); min-width: 40px; }
+.wizard-grid tr.wizard-header-row td { background: var(--accent); color: #fff; font-weight: 600; }
+.wizard-grid tr.wizard-header-row td:first-child { background: var(--accent); color: #fff; }
+.wizard-grid input[type="checkbox"] { cursor: pointer; }
+
+/* 재무제표 전용 창 */
+.fs-window { padding: var(--sp-4) var(--sp-5); height: 100vh; overflow: auto; box-sizing: border-box; }
+.fs-window h2 { font-size: 15px; margin: 0 0 14px; color: var(--text); }

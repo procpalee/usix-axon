@@ -1,0 +1,5 @@
+# 라이브러리 크레이트 anyhow 금지 (CLAUDE.md §3). 바이너리 entrypoint·통합 테스트만 예외.
+disallowed-types = [
+    { path = "anyhow::Error", reason = "라이브러리는 도메인 에러 타입 사용 (anyhow는 바이너리·통합 테스트만)." },
+    { path = "anyhow::Result", reason = "라이브러리는 도메인 에러 타입 사용." },
+]

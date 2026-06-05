@@ -1,0 +1,16 @@
+[package]
+name = "axon-core"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+# 순수 도메인 의존만 (fs/net/thread 0 → wasm-ready 유지).
+rust_decimal = { version = "1", features = ["serde"] }   # Money — f64 금지, 정확한 십진 산술
+serde = { version = "1", features = ["derive"] }          # 도메인 직렬화 (프론트/어댑터 경계)
+serde_json = "1"                                          # JSON export (Table 직렬화) — 순수, wasm-ok
+
+[lints]
+workspace = true

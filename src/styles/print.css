@@ -1,0 +1,6 @@
+@media print {
+  .activitybar, .sidebar, .statusbar, .result-bar, .panel { display: none !important; }
+  .main { grid-column: 1 / 4 !important; padding: 0 !important; overflow: visible !important; }
+  #result-area th { position: static; }
+  #result-area table { font-size: var(--fs-xs); }
+}

@@ -1,0 +1,57 @@
+# Rust build artifacts
+/target/
+**/target/
+
+# Tauri / Node
+node_modules/
+dist/
+dist-ssr/
+.vite/
+src-tauri/target/
+src-tauri/gen/
+*.local
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Claude Code — 개인 세션·메모리·작업규칙 (PUBLIC repo 비공개화, 로컬엔 유지).
+.claude/
+CLAUDE.md
+
+# 내부 설계 문서 (비공개 — 노하우 보관소, 경쟁사 노출 방지. 코드 주석에서 뺀 맥락이 여기 산다)
+docs/
+
+# 로컬 운영 스크립트 (발행 등 — 공개 repo 에 워크플로 노출 안 함)
+scripts/
+
+# Misc / scratch
+*.tmp
+temp_*
+
+# Secrets / env (PUBLIC repo — 절대 커밋 금지)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets.*
+
+# Logs
+*.log
+
+# WASM 빌드 산출물 (wasm-pack — axon-wasm 추가 시)
+crates/*/pkg/
+
+# Cargo.lock 은 ignore 안 함 — axon 은 앱이라 커밋한다(재현 빌드)
+
+# Tauri icon 모바일/스토어 생성물 — 데스크톱만 쓴다 (tauri icon 재실행 시 재생성됨)
+src-tauri/icons/android/
+src-tauri/icons/ios/
+src-tauri/icons/Square*Logo.png
+src-tauri/icons/StoreLogo.png

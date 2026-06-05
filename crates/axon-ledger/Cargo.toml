@@ -1,0 +1,20 @@
+[package]
+name = "axon-ledger"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+# 원장/감사 분석 엔진 (IDEA/ACL식) — 폴라스 위. **데스크톱 전용.**
+# ⚠️ axon-core(wasm 순수)는 이 crate 를 의존하지 않는다 (의존 방향: axon-ledger → axon-core).
+#    폴라스는 여기서만 산다. core 에 들어가면 wasm 타깃이 죽는다.
+[dependencies]
+axon-core = { path = "../axon-core" }   # Table 등 공통 뷰 타입 재사용
+calamine = "0.35.0"
+csv = "1.4.0"
+polars = { version = "0.53.0", default-features = false, features = ["csv", "lazy", "dtype-decimal"] }
+rust_decimal = { version = "1", features = ["serde"] }
+
+[lints]
+workspace = true
