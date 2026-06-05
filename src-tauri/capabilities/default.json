@@ -2,6 +2,6 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "기본 권한 — core 만 (capability model, CLAUDE.md §2).",
-  "windows": ["main", "fs-*", "corp-search", "chart-*", "ledger-wizard", "workpaper"],
+  "windows": ["main", "fs-*", "corp-search", "chart-*", "ledger-wizard", "workpaper", "legal-*"],
   "permissions": ["core:default", "core:webview:allow-create-webview-window", "core:event:default", "core:window:allow-close", "opener:default", "updater:default", "dialog:default"]
 }
