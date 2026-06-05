@@ -1,13 +1,20 @@
-//! PDF 내보내기 — 테이블 + 메타 헤더(MUS 시드 등). 시스템 한글 폰트 자동 탐색.
+//! PDF 내보내기 — A4 가로, 열 폭 비례 배분, 시스템 한글 폰트 자동 탐색.
 
 use axon_core::domain::table::Table;
 use printpdf::*;
 use std::io::Cursor;
 
-const W: f32 = 210.0;
-const H: f32 = 297.0;
-const M: f32 = 15.0;
-const USABLE_W: f32 = W - 2.0 * M;
+const W: f32 = 297.0;
+const H: f32 = 210.0;
+const MARGIN: f32 = 12.0;
+const USABLE: f32 = W - 2.0 * MARGIN;
+const BODY_PT: f32 = 6.5;
+const HDR_PT: f32 = 7.0;
+const META_TITLE_PT: f32 = 12.0;
+const META_PT: f32 = 8.0;
+const ROW_H: f32 = 3.8;
+const HDR_GAP: f32 = 4.5;
+const META_LINE_H: f32 = 4.0;
 
 fn find_korean_font() -> Option<Vec<u8>> {
     let paths = [
@@ -29,6 +36,47 @@ fn find_korean_font() -> Option<Vec<u8>> {
     None
 }
 
+fn text_score(s: &str) -> f32 {
+    s.chars()
+        .map(|c| if c > '\u{2E7F}' { 1.7 } else { 1.0 })
+        .sum()
+}
+
+fn col_widths(table: &Table) -> Vec<f32> {
+    let n = table.headers.len().max(1);
+    let mut scores: Vec<f32> = vec![0.0; n];
+    for (i, h) in table.headers.iter().enumerate() {
+        scores[i] = text_score(h);
+    }
+    for row in &table.rows {
+        for (i, cell) in row.iter().enumerate().take(n) {
+            scores[i] = scores[i].max(text_score(cell));
+        }
+    }
+    for s in &mut scores {
+        *s = s.clamp(3.0, 50.0);
+    }
+    let total: f32 = scores.iter().sum();
+    if total == 0.0 {
+        return vec![USABLE / n as f32; n];
+    }
+    scores.iter().map(|s| s / total * USABLE).collect()
+}
+
+fn max_chars(col_w: f32, font_pt: f32) -> usize {
+    (col_w / (font_pt * 0.28)).max(3.0) as usize
+}
+
+fn truncate(s: &str, max: usize) -> String {
+    if s.chars().count() <= max {
+        s.to_string()
+    } else {
+        let mut t: String = s.chars().take(max.saturating_sub(1)).collect();
+        t.push('…');
+        t
+    }
+}
+
 pub fn export_pdf(table: &Table, meta: &[(String, String)]) -> Result<Vec<u8>, String> {
     let (doc, page1, layer1) = PdfDocument::new("axon", Mm(W), Mm(H), "L");
 
@@ -43,43 +91,41 @@ pub fn export_pdf(table: &Table, meta: &[(String, String)]) -> Result<Vec<u8>, S
         .add_builtin_font(BuiltinFont::HelveticaBold)
         .map_err(|e| format!("{e}"))?;
 
-    let ncols = table.headers.len().max(1);
-    let col_w = USABLE_W / ncols as f32;
-    let mut y = H - M;
+    let widths = col_widths(table);
+    let mut y = H - MARGIN;
     let mut layer = doc.get_page(page1).get_layer(layer1);
 
-    // 메타 헤더
     if !meta.is_empty() {
-        layer.use_text("axon 분석 결과", 13.0, Mm(M), Mm(y), &font_bold);
-        y -= 7.0;
+        layer.use_text("axon", META_TITLE_PT, Mm(MARGIN), Mm(y), &font_bold);
+        y -= 6.0;
         for (k, v) in meta {
-            layer.use_text(&format!("{k}: {v}"), 9.0, Mm(M), Mm(y), &font);
-            y -= 4.5;
+            layer.use_text(&format!("{k}: {v}"), META_PT, Mm(MARGIN), Mm(y), &font);
+            y -= META_LINE_H;
         }
-        y -= 4.0;
+        y -= 3.0;
     }
 
-    let header_y = y;
-    write_headers(&layer, &font_bold, &table.headers, col_w, y);
-    y -= 5.0;
+    write_headers(&layer, &font_bold, &table.headers, &widths, y);
+    y -= HDR_GAP;
 
     for row in &table.rows {
-        if y < M + 5.0 {
+        if y < MARGIN + 4.0 {
             let (np, nl) = doc.add_page(Mm(W), Mm(H), "L");
             layer = doc.get_page(np).get_layer(nl);
-            y = H - M;
-            write_headers(&layer, &font_bold, &table.headers, col_w, y);
-            y -= 5.0;
+            y = H - MARGIN;
+            write_headers(&layer, &font_bold, &table.headers, &widths, y);
+            y -= HDR_GAP;
         }
+        let mut x = MARGIN;
         for (c, cell) in row.iter().enumerate() {
-            let txt = truncate(cell, 30);
-            layer.use_text(&txt, 8.0, Mm(M + c as f32 * col_w), Mm(y), &font);
+            let cw = widths.get(c).copied().unwrap_or(10.0);
+            let mc = max_chars(cw, BODY_PT);
+            layer.use_text(&truncate(cell, mc), BODY_PT, Mm(x), Mm(y), &font);
+            x += cw;
         }
-        y -= 4.5;
+        y -= ROW_H;
     }
 
-    // 하단 페이지 번호는 printpdf 한계로 생략 — 페이지 수가 적은 감사 표본에선 불필요.
-    let _ = header_y;
     doc.save_to_bytes().map_err(|e| format!("PDF 저장 실패: {e}"))
 }
 
@@ -87,21 +133,14 @@ fn write_headers(
     layer: &PdfLayerReference,
     font: &IndirectFontRef,
     headers: &[String],
-    col_w: f32,
+    widths: &[f32],
     y: f32,
 ) {
+    let mut x = MARGIN;
     for (c, h) in headers.iter().enumerate() {
-        let txt = truncate(h, 20);
-        layer.use_text(&txt, 9.0, Mm(M + c as f32 * col_w), Mm(y), font);
-    }
-}
-
-fn truncate(s: &str, max: usize) -> String {
-    if s.chars().count() <= max {
-        s.to_string()
-    } else {
-        let mut t: String = s.chars().take(max - 1).collect();
-        t.push('…');
-        t
+        let cw = widths.get(c).copied().unwrap_or(10.0);
+        let mc = max_chars(cw, HDR_PT);
+        layer.use_text(&truncate(h, mc), HDR_PT, Mm(x), Mm(y), font);
+        x += cw;
     }
 }

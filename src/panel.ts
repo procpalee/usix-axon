@@ -13,7 +13,7 @@ function setPanel(open: boolean): void {
 export async function refreshPanelGate(): Promise<void> {
   const hasToken = await invoke<boolean>("has_daemon_token");
   panelToggle.disabled = !hasToken;
-  panelToggle.title = hasToken ? "작업 패널 (채팅·조서·분석)" : "daemon 로그인 후 사용 가능 (설정 ⚙)";
+  panelToggle.title = hasToken ? "작업 패널 (채팅·조서·분석)" : "usix AI 로그인 후 사용 가능 (설정 ⚙)";
   if (!hasToken) setPanel(false);
   else if (localStorage.getItem("axon-panel") !== "0") setPanel(true);
 }

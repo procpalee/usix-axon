@@ -76,8 +76,20 @@ export function showMusDialog(headers: string[]): Promise<MusParams | null> {
   return new Promise((resolve) => {
     const amtSel = buildSelect(headers, "금액열…");
     const pmIn = document.createElement("input");
-    pmIn.type = "number";
+    pmIn.type = "text";
+    pmIn.inputMode = "decimal";
     pmIn.placeholder = "PM (수행중요성)";
+    pmIn.addEventListener("input", () => {
+      const raw = pmIn.value.replace(/,/g, "");
+      const n = Number(raw);
+      if (raw && Number.isFinite(n)) {
+        const pos = pmIn.selectionStart ?? pmIn.value.length;
+        const lenBefore = pmIn.value.length;
+        pmIn.value = n.toLocaleString("en-US", { maximumFractionDigits: 10 });
+        const delta = pmIn.value.length - lenBefore;
+        pmIn.setSelectionRange(pos + delta, pos + delta);
+      }
+    });
     const confSel = buildConfidenceSelect();
     showModal({
       title: "화폐단위표본추출 (MUS)",
@@ -89,7 +101,7 @@ export function showMusDialog(headers: string[]): Promise<MusParams | null> {
       okLabel: "추출",
       cancelLabel: "취소",
       onOk: () => {
-        const pm = parseFloat(pmIn.value);
+        const pm = parseFloat(pmIn.value.replace(/,/g, ""));
         if (!amtSel.value || !Number.isFinite(pm) || pm <= 0) { resolve(null); return; }
         resolve({ amountCol: amtSel.value, pm, confidence: parseFloat(confSel.value) });
       },

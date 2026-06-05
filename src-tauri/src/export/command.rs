@@ -32,11 +32,19 @@ pub async fn export_table(
     let meta = meta.unwrap_or_default();
     let bytes = export_bytes(&format, &table, &meta)?;
 
+    let label = meta
+        .iter()
+        .find(|(k, _)| k == "분석")
+        .map(|(_, v)| v.as_str())
+        .unwrap_or("결과");
+    let today = chrono::Local::now().format("%Y%m%d");
+    let filename = format!("{label}_{today}.{format}");
+
     let path = app
         .dialog()
         .file()
         .add_filter(&format, &[format.as_str()])
-        .set_file_name(format!("결과.{format}"))
+        .set_file_name(filename)
         .blocking_save_file();
 
     match path {
