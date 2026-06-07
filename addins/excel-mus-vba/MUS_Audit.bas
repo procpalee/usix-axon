@@ -3,33 +3,14 @@ Option Explicit
 
 ' ============================================================
 '  axon MUS - Monetary Unit Sampling (PPS) for audit evidence
-'  Pure VBA, ASCII only (no locale/encoding issues).
-'  Conforms to ISA 530 / AICPA MUS sampling + evaluation.
+'  Pure VBA, ASCII only. ISA 530 / AICPA MUS sampling + evaluation.
 ' ------------------------------------------------------------
-'  Macros:
-'   MUS_Sample   - draw the sample, write a self-documenting
-'                  working paper sheet, append an audit log row.
-'   MUS_Evaluate - run on a result sheet AFTER entering Audit_Value
-'                  values; recomputes the precise upper error limit
-'                  (UEL) using ranked incremental reliability factors,
-'                  and the accept/reject verdict.
-'
-'  Planning:
-'   R0  = reliability factor at 0 expected errors (Poisson)
-'   interval = PM / R0 ;  amount >= interval -> Key Item (100% examined)
-'   amount < interval  -> systematic PPS selection from a seeded start
-'
-'  Evaluation (precise, AICPA incremental method):
-'   Basic precision = R0 * interval
-'   For each PPS misstatement (book < interval), ranked by tainting desc:
-'     tainting_j  = (Book - Audit) / Book
-'     projected_j = tainting_j * interval
-'     incr_j      = R(j) - R(j-1)            ' incremental reliability factor
-'   UEL = Basic precision + SUM( projected_j * incr_j ) + key-item actuals
-'   Verdict: UEL <= PM -> Acceptable, else Further audit work needed
-'
-'  Deterministic: same (range, PM, confidence, seed) = same sample.
-'  Every run is recorded on the "MUS_Log" sheet (audit trail).
+'  MUS_Sample   - draw the sample, write the table, attach a summary
+'                 NOTE to cell A1, and append an audit-trail log row.
+'  MUS_Evaluate - run AFTER entering Audit_Value; recomputes the
+'                 precise upper error limit (UEL) with ranked
+'                 incremental reliability factors and refreshes the note.
+'  R(k) = Poisson reliability factor (pure VBA). interval = PM / R0.
 ' ============================================================
 
 Private Const LOG_SHEET As String = "MUS_Log"
@@ -40,6 +21,7 @@ Private Const H_BOOK As String = "Book_Value"
 Private Const H_AUDIT As String = "Audit_Value"
 Private Const H_TAINT As String = "Tainting"
 Private Const H_PROJ As String = "Projected_MS"
+Private Const MARKER As String = "===== Evaluation ====="
 
 Public Sub MUS_Sample()
     Dim rng As Range
@@ -82,7 +64,11 @@ Public Sub MUS_Sample()
     If Not IsNumeric(s) Then Exit Sub
     Dim seed As Double: seed = CDbl(s)
 
-    Dim rf As Double: rf = ReliabilityFactor(conf, 0)   ' R0
+    Dim itemName As String
+    itemName = Trim(InputBox("Sampling item name (used for the sheet name):", "MUS - Item name", "Sample"))
+    If itemName = "" Then itemName = "Sample"
+
+    Dim rf As Double: rf = ReliabilityFactor(conf, 0)
     Dim interval As Double: interval = pm / rf
 
     Dim keyIdx() As Long, ppsIdx() As Long, ppsAmt() As Double
@@ -139,86 +125,86 @@ Public Sub MUS_Sample()
 
     Dim ws As Worksheet: Set ws = ActiveWorkbook.Worksheets.Add
     Dim runId As Long: runId = NextRunId()
-    On Error Resume Next
-    ws.Name = "MUS run" & runId
-    On Error GoTo 0
+    NameSheet ws, itemName, runId
+    ws.Tab.Color = RGB(46, 117, 182)               ' distinct tab color
 
-    Dim HR As Long: HR = 26                          ' table header row
-    ws.Range("A1").Value = "axon MUS - Working Paper"
-    PutP ws, 2, "Run ID", runId
-    PutP ws, 3, "Run time", Format(Now, "yyyy-mm-dd hh:nn:ss")
-    PutP ws, 4, "Performed by", Environ$("USERNAME")
-    PutP ws, 5, "Workbook", ActiveWorkbook.Name
-    PutP ws, 6, "Source sheet", srcWs.Name
-    PutP ws, 7, "Source range", rng.Address(False, False)
-    PutP ws, 8, "Amount column", CStr(data(1, amtCol))
-    PutP ws, 9, "Population count (positive)", popN
-    PutP ws, 10, "Population total", popTotal
-    PutP ws, 11, "Performance materiality (PM)", pm
-    PutP ws, 12, "Confidence", conf
-    PutP ws, 13, "Reliability factor R0", rf
-    PutP ws, 14, "Sampling interval", interval
-    PutP ws, 15, "Seed", seed
-    PutP ws, 16, "Random start", startPt
-    PutP ws, 17, "Key items", nKey
-    PutP ws, 18, "PPS samples", nSel - nKey
-    PutP ws, 19, "Sample size", nSel
-    PutP ws, 20, "Basic precision", basicPrec
-    PutP ws, 21, "Projected misstatement", 0
-    PutP ws, 22, "Incremental allowance", 0
-    PutP ws, 23, "Upper error limit (UEL)", basicPrec
-    PutP ws, 24, "Verdict (run MUS_Evaluate after audit)", ""
+    ' sheet-scoped names used by formulas and re-evaluation
+    AddNum ws, "MUS_PM", pm
+    AddNum ws, "MUS_CONF", conf
+    AddNum ws, "MUS_INTERVAL", interval
 
+    ' table: header row 1, data from row 2
     For c = 1 To nCols
-        ws.Cells(HR, c).Value = data(1, c)
+        ws.Cells(1, c).Value = data(1, c)
     Next c
-    ws.Cells(HR, nCols + 1).Value = H_TYPE
-    ws.Cells(HR, nCols + 2).Value = H_BOOK
-    ws.Cells(HR, nCols + 3).Value = H_AUDIT
-    ws.Cells(HR, nCols + 4).Value = H_TAINT
-    ws.Cells(HR, nCols + 5).Value = H_PROJ
+    ws.Cells(1, nCols + 1).Value = H_TYPE
+    ws.Cells(1, nCols + 2).Value = H_BOOK
+    ws.Cells(1, nCols + 3).Value = H_AUDIT
+    ws.Cells(1, nCols + 4).Value = H_TAINT
+    ws.Cells(1, nCols + 5).Value = H_PROJ
 
     Dim r As Long, srcRow As Long, rowAbs As Long
     For r = 1 To nSel
         srcRow = selRow(r)
-        rowAbs = HR + r
+        rowAbs = 1 + r
         For c = 1 To nCols
             ws.Cells(rowAbs, c).Value = data(srcRow, c)
         Next c
         ws.Cells(rowAbs, nCols + 1).Value = selType(r)
         ws.Cells(rowAbs, nCols + 2).Value = data(srcRow, amtCol)
-        ws.Cells(rowAbs, nCols + 3).Value = data(srcRow, amtCol)   ' Audit_Value (auditor edits)
+        ws.Cells(rowAbs, nCols + 3).Value = data(srcRow, amtCol)
         ws.Cells(rowAbs, nCols + 4).FormulaR1C1 = "=IF(RC[-2]>0,(RC[-2]-RC[-1])/RC[-2],0)"
         If selType(r) = T_KEY Then
             ws.Cells(rowAbs, nCols + 5).FormulaR1C1 = "=RC[-3]-RC[-2]"
         Else
-            ws.Cells(rowAbs, nCols + 5).FormulaR1C1 = "=RC[-1]*R14C2"
+            ws.Cells(rowAbs, nCols + 5).FormulaR1C1 = "=RC[-1]*MUS_INTERVAL"
         End If
     Next r
 
+    ' number formats
+    ws.Range(ws.Cells(2, nCols + 2), ws.Cells(1 + nSel, nCols + 3)).NumberFormat = "#,##0"
+    ws.Range(ws.Cells(2, nCols + 4), ws.Cells(1 + nSel, nCols + 4)).NumberFormat = "0.0%"
+    ws.Range(ws.Cells(2, nCols + 5), ws.Cells(1 + nSel, nCols + 5)).NumberFormat = "#,##0"
+    ws.Rows(1).Font.Bold = True
     ws.Columns.AutoFit
-    ws.Range("A1").Font.Bold = True
-    ws.Rows(HR).Font.Bold = True
 
-    EvaluateSheet ws    ' initial fill (0 errors -> UEL = basic precision)
+    ' static part of the summary note
+    Dim st As String
+    st = "MUS Sampling Summary" & vbLf & String(34, "-") & vbLf
+    st = st & "Item: " & itemName & vbLf
+    st = st & "Run ID: " & runId & "    Run time: " & Format(Now, "yyyy-mm-dd hh:nn:ss") & vbLf
+    st = st & "Performed by: " & Environ$("USERNAME") & vbLf
+    st = st & "Workbook: " & ActiveWorkbook.Name & vbLf
+    st = st & "Source: " & srcWs.Name & "!" & rng.Address(False, False) & "   Amount: " & CStr(data(1, amtCol)) & vbLf & vbLf
+    st = st & "[Planning]" & vbLf
+    st = st & "Population: " & Fmt(popN) & " items / " & Fmt(popTotal) & vbLf
+    st = st & "PM (tolerable): " & Fmt(pm) & vbLf
+    st = st & "Confidence: " & Format(conf * 100, "0") & "%" & vbLf
+    st = st & "Reliability factor R0: " & Fmt(rf) & vbLf
+    st = st & "Sampling interval: " & Fmt(interval) & vbLf
+    st = st & "Seed: " & Fmt(seed) & "   Random start: " & Fmt(startPt) & vbLf
+    st = st & "Sample: " & Fmt(nSel) & "  (Key " & Fmt(nKey) & " / PPS " & Fmt(nSel - nKey) & ")" & vbLf
+    st = st & "Basic precision: " & Fmt(basicPrec) & vbLf & vbLf
 
-    WriteLog runId, srcWs.Name, rng.Address(False, False), CStr(data(1, amtCol)), _
+    SetNote ws, st & MARKER & vbLf & "(pending - run MUS_Evaluate after entering Audit_Value)"
+    EvaluateSheet ws
+
+    WriteLog runId, itemName, srcWs.Name, rng.Address(False, False), CStr(data(1, amtCol)), _
              popN, popTotal, pm, conf, rf, interval, seed, startPt, _
              nKey, nSel - nKey, nSel, basicPrec, ws.Name
 
     Application.Goto ws.Range("A1"), True
     MsgBox "Sample: " & nSel & " (Key " & nKey & " / PPS " & (nSel - nKey) & ")" & vbCrLf & _
-           "Sheet: " & ws.Name & "   Logged as run " & runId & " on '" & LOG_SHEET & "'." & vbCrLf & vbCrLf & _
-           "Next: fill the Audit_Value column, then run MUS_Evaluate to get the precise UEL.", _
+           "Sheet: " & ws.Name & "   (summary is the note on cell A1)" & vbCrLf & _
+           "Logged as run " & runId & " on '" & LOG_SHEET & "'." & vbCrLf & vbCrLf & _
+           "Next: fill Audit_Value, then run MUS_Evaluate for the precise UEL.", _
            vbInformation, "axon MUS"
 End Sub
 
-' Recompute the precise UEL (ranked incremental method) on the active sheet.
 Public Sub MUS_Evaluate()
     On Error GoTo fail
     EvaluateSheet ActiveSheet
-    Application.Goto ActiveSheet.Range("A20"), True
-    MsgBox "Evaluation updated (cells B21..B24)." & vbCrLf & _
+    MsgBox "Evaluation refreshed in the note on cell A1." & vbCrLf & _
            "UEL uses ranked incremental reliability factors." & vbCrLf & _
            "If UEL <= PM the population is acceptable; otherwise extend procedures.", _
            vbInformation, "axon MUS - Evaluate"
@@ -227,14 +213,13 @@ fail:
     MsgBox "Run this on a MUS result sheet (one made by MUS_Sample).", vbExclamation
 End Sub
 
-' --- core evaluation: ranked incremental UEL written to B20..B24 ---
+' --- core evaluation: ranked incremental UEL, refreshes the A1 note ---
 Private Sub EvaluateSheet(ws As Worksheet)
-    Dim pm As Double: pm = ws.Range("B11").Value
-    Dim conf As Double: conf = ws.Range("B12").Value
-    Dim r0 As Double: r0 = ws.Range("B13").Value
-    Dim interval As Double: interval = ws.Range("B14").Value
+    Dim pm As Double: pm = ws.Evaluate("MUS_PM")
+    Dim conf As Double: conf = ws.Evaluate("MUS_CONF")
+    Dim interval As Double: interval = ws.Evaluate("MUS_INTERVAL")
+    Dim r0 As Double: r0 = ReliabilityFactor(conf, 0)
 
-    ' locate the table by its Book_Value header
     Dim found As Range
     Set found = ws.Cells.Find(What:=H_BOOK, LookAt:=xlWhole, MatchCase:=True)
     If found Is Nothing Then Err.Raise 5
@@ -242,7 +227,6 @@ Private Sub EvaluateSheet(ws As Worksheet)
     HR = found.Row: bookCol = found.Column
     typeCol = bookCol - 1: auditCol = bookCol + 1
 
-    ' collect PPS overstatement projections + key-item actual overstatements
     Dim proj() As Double: ReDim proj(1 To 1)
     Dim m As Long: m = 0
     Dim keyActual As Double
@@ -253,38 +237,28 @@ Private Sub EvaluateSheet(ws As Worksheet)
         audit = SafeNum(ws.Cells(r, auditCol).Value)
         If ws.Cells(r, typeCol).Value = T_KEY Then
             If book - audit > 0 Then keyActual = keyActual + (book - audit)
-        Else
-            If book > 0 Then
-                taint = (book - audit) / book
-                If taint > 0 Then
-                    m = m + 1
-                    ReDim Preserve proj(1 To m)
-                    proj(m) = taint * interval
-                End If
+        ElseIf book > 0 Then
+            taint = (book - audit) / book
+            If taint > 0 Then
+                m = m + 1: ReDim Preserve proj(1 To m): proj(m) = taint * interval
             End If
         End If
         r = r + 1
     Loop
 
-    ' rank projections descending
     Dim i As Long, j As Long, tmp As Double
     For i = 1 To m - 1
         For j = 1 To m - i
-            If proj(j) < proj(j + 1) Then
-                tmp = proj(j): proj(j) = proj(j + 1): proj(j + 1) = tmp
-            End If
+            If proj(j) < proj(j + 1) Then tmp = proj(j): proj(j) = proj(j + 1): proj(j + 1) = tmp
         Next j
     Next i
 
-    ' incremental reliability factors: incr_j = R(j) - R(j-1)
     Dim basicPrec As Double: basicPrec = r0 * interval
-    Dim rankedSum As Double, projPPS As Double, incr As Double
-    Dim rPrev As Double, rCur As Double
+    Dim rankedSum As Double, projPPS As Double, rPrev As Double, rCur As Double
     rPrev = r0
     For j = 1 To m
         rCur = ReliabilityFactor(conf, j)
-        incr = rCur - rPrev
-        rankedSum = rankedSum + proj(j) * incr
+        rankedSum = rankedSum + proj(j) * (rCur - rPrev)
         projPPS = projPPS + proj(j)
         rPrev = rCur
     Next j
@@ -292,32 +266,31 @@ Private Sub EvaluateSheet(ws As Worksheet)
     Dim uel As Double: uel = basicPrec + rankedSum + keyActual
     Dim projectedTotal As Double: projectedTotal = projPPS + keyActual
     Dim incrementalAllow As Double: incrementalAllow = rankedSum - projPPS
+    Dim verdict As String
+    If uel <= pm Then verdict = "Acceptable (UEL <= PM)" Else verdict = "Further audit work needed (UEL > PM)"
 
-    ws.Range("B20").Value = basicPrec
-    ws.Range("B21").Value = projectedTotal
-    ws.Range("B22").Value = incrementalAllow
-    ws.Range("B23").Value = uel
-    ws.Range("A24").Value = "Verdict"
-    If uel <= pm Then
-        ws.Range("B24").Value = "Acceptable (UEL <= PM)"
-    Else
-        ws.Range("B24").Value = "Further audit work needed (UEL > PM)"
-    End If
+    Dim ev As String
+    ev = MARKER & vbLf
+    ev = ev & "Projected misstatement: " & Fmt(projectedTotal) & vbLf
+    ev = ev & "Incremental allowance: " & Fmt(incrementalAllow) & vbLf
+    ev = ev & "Upper error limit (UEL): " & Fmt(uel) & vbLf
+    ev = ev & "Verdict: " & verdict
+
+    Dim full As String, pos As Long
+    full = GetNote(ws)
+    pos = InStr(full, MARKER)
+    If pos > 0 Then full = Left$(full, pos - 1)
+    SetNote ws, full & ev
 End Sub
 
-' --- reliability factor R(k): Poisson, no worksheet-function dependency ---
-' R(k) = x such that Poisson CDF(k; mean=x) = 1 - conf.  R(0) = -ln(1-conf).
+' --- reliability factor R(k): Poisson inversion, no worksheet dependency ---
 Private Function ReliabilityFactor(ByVal conf As Double, ByVal k As Long) As Double
     Dim target As Double: target = 1# - conf
     Dim lo As Double, hi As Double, mid As Double, it As Long
     lo = 0#: hi = 50# + 2# * k
     For it = 1 To 200
         mid = (lo + hi) / 2#
-        If PoissonCDF(k, mid) > target Then
-            lo = mid          ' CDF decreases in x: too high -> increase x
-        Else
-            hi = mid
-        End If
+        If PoissonCDF(k, mid) > target Then lo = mid Else hi = mid
     Next it
     ReliabilityFactor = (lo + hi) / 2#
 End Function
@@ -331,15 +304,48 @@ Private Function PoissonCDF(ByVal k As Long, ByVal x As Double) As Double
     PoissonCDF = sum
 End Function
 
+' --- formatting / helpers ---
+Private Function Fmt(v As Variant) As String
+    If IsNumeric(v) Then Fmt = Format(v, "#,##0.####") Else Fmt = CStr(v)
+End Function
+
 Private Function SafeNum(v As Variant) As Double
     If IsNumeric(v) Then SafeNum = CDbl(v) Else SafeNum = 0#
 End Function
 
-' --- helpers ---
-Private Sub PutP(ws As Worksheet, rowN As Long, label As String, v As Variant)
-    ws.Cells(rowN, 1).Value = label
-    ws.Cells(rowN, 2).Value = v
+Private Sub AddNum(ws As Worksheet, nm As String, v As Double)
+    ws.Names.Add Name:=nm, RefersTo:="=" & Replace(Trim(Str(v)), " ", "")
 End Sub
+
+Private Sub NameSheet(ws As Worksheet, itemName As String, runId As Long)
+    Dim base As String: base = "MUS_" & CleanName(itemName)
+    Dim nm As String: nm = Left$(base, 31)
+    On Error Resume Next
+    ws.Name = nm
+    If ws.Name <> nm Then ws.Name = Left$(base, 27) & "_" & runId
+    If ws.Name <> Left$(base, 27) & "_" & runId And ws.Name <> nm Then ws.Name = "MUS_" & runId
+    On Error GoTo 0
+End Sub
+
+Private Function CleanName(ByVal t As String) As String
+    Dim bad As Variant, x As Variant
+    bad = Array(":", "\", "/", "?", "*", "[", "]")
+    For Each x In bad
+        t = Replace(t, CStr(x), "")
+    Next x
+    CleanName = Trim(t)
+End Function
+
+Private Sub SetNote(ws As Worksheet, text As String)
+    Dim cell As Range: Set cell = ws.Range("A1")
+    If cell.Comment Is Nothing Then cell.AddComment
+    cell.Comment.Text Text:=text
+    cell.Comment.Shape.TextFrame.AutoSize = True
+End Sub
+
+Private Function GetNote(ws As Worksheet) As String
+    If ws.Range("A1").Comment Is Nothing Then GetNote = "" Else GetNote = ws.Range("A1").Comment.Text
+End Function
 
 Private Function NextRunId() As Long
     Dim lg As Worksheet: Set lg = LogSheet()
@@ -356,7 +362,7 @@ Private Function LogSheet() As Worksheet
         Set lg = ActiveWorkbook.Worksheets.Add
         lg.Name = LOG_SHEET
         Dim hdr As Variant, k As Long
-        hdr = Array("Run_ID", "Timestamp", "User", "Workbook", "Source_Sheet", _
+        hdr = Array("Run_ID", "Item", "Timestamp", "User", "Workbook", "Source_Sheet", _
             "Source_Range", "Amount_Col", "Pop_Count", "Pop_Total", "PM", _
             "Confidence", "R_Factor", "Interval", "Seed", "Random_Start", _
             "Key_Items", "PPS_Samples", "Sample_Size", "Basic_Precision", "Result_Sheet")
@@ -368,38 +374,35 @@ Private Function LogSheet() As Worksheet
     Set LogSheet = lg
 End Function
 
-Private Sub WriteLog(runId As Long, srcSheet As String, srcRange As String, amtName As String, _
-        popN As Long, popTotal As Double, pm As Double, conf As Double, rf As Double, _
-        interval As Double, seed As Double, startPt As Double, nKey As Long, nPps As Long, _
-        nSel As Long, basicPrec As Double, resultSheet As String)
+Private Sub WriteLog(runId As Long, itemName As String, srcSheet As String, srcRange As String, _
+        amtName As String, popN As Long, popTotal As Double, pm As Double, conf As Double, _
+        rf As Double, interval As Double, seed As Double, startPt As Double, nKey As Long, _
+        nPps As Long, nSel As Long, basicPrec As Double, resultSheet As String)
     Dim lg As Worksheet: Set lg = LogSheet()
     Dim r As Long: r = lg.Cells(lg.Rows.Count, 1).End(xlUp).Row + 1
     lg.Cells(r, 1).Value = runId
-    lg.Cells(r, 2).Value = Format(Now, "yyyy-mm-dd hh:nn:ss")
-    lg.Cells(r, 3).Value = Environ$("USERNAME")
-    lg.Cells(r, 4).Value = ActiveWorkbook.Name
-    lg.Cells(r, 5).Value = srcSheet
-    lg.Cells(r, 6).Value = srcRange
-    lg.Cells(r, 7).Value = amtName
-    lg.Cells(r, 8).Value = popN
-    lg.Cells(r, 9).Value = popTotal
-    lg.Cells(r, 10).Value = pm
-    lg.Cells(r, 11).Value = conf
-    lg.Cells(r, 12).Value = rf
-    lg.Cells(r, 13).Value = interval
-    lg.Cells(r, 14).Value = seed
-    lg.Cells(r, 15).Value = startPt
-    lg.Cells(r, 16).Value = nKey
-    lg.Cells(r, 17).Value = nPps
-    lg.Cells(r, 18).Value = nSel
-    lg.Cells(r, 19).Value = basicPrec
-    lg.Cells(r, 20).Value = resultSheet
+    lg.Cells(r, 2).Value = itemName
+    lg.Cells(r, 3).Value = Format(Now, "yyyy-mm-dd hh:nn:ss")
+    lg.Cells(r, 4).Value = Environ$("USERNAME")
+    lg.Cells(r, 5).Value = ActiveWorkbook.Name
+    lg.Cells(r, 6).Value = srcSheet
+    lg.Cells(r, 7).Value = srcRange
+    lg.Cells(r, 8).Value = amtName
+    lg.Cells(r, 9).Value = popN
+    lg.Cells(r, 10).Value = popTotal
+    lg.Cells(r, 11).Value = pm
+    lg.Cells(r, 12).Value = conf
+    lg.Cells(r, 13).Value = rf
+    lg.Cells(r, 14).Value = interval
+    lg.Cells(r, 15).Value = seed
+    lg.Cells(r, 16).Value = startPt
+    lg.Cells(r, 17).Value = nKey
+    lg.Cells(r, 18).Value = nPps
+    lg.Cells(r, 19).Value = nSel
+    lg.Cells(r, 20).Value = basicPrec
+    lg.Cells(r, 21).Value = resultSheet
 End Sub
 
-' ============================================================
-'  Add-in (.xlam) ribbon button - appears under the "Add-ins" tab
-'  when this file is loaded as an Excel Add-in. Pure VBA, no XML.
-' ============================================================
 Public Sub Auto_Open()
     On Error Resume Next
     Application.CommandBars("axon MUS").Delete
