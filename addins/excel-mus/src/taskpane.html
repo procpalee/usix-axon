@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>axon MUS 표본추출</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        margin: 0;
+        padding: 16px;
+        font-size: 14px;
+      }
+      h1 { font-size: 16px; margin: 0 0 4px; }
+      .sub { color: #888; font-size: 12px; margin: 0 0 16px; }
+      .row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+      label { font-weight: 600; font-size: 12px; }
+      select, input {
+        padding: 6px 8px;
+        font-size: 14px;
+        border: 1px solid #bbb;
+        border-radius: 4px;
+        background: Field;
+        color: FieldText;
+      }
+      button {
+        width: 100%;
+        padding: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: 0;
+        border-radius: 4px;
+        background: #2563eb;
+        color: #fff;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.5; cursor: default; }
+      .secondary {
+        background: transparent;
+        color: #2563eb;
+        border: 1px solid #2563eb;
+        margin-bottom: 12px;
+      }
+      .status { margin-top: 12px; font-size: 12px; min-height: 1.2em; }
+      .ok { color: #16a34a; }
+      .err { color: #dc2626; }
+    </style>
+  </head>
+  <body>
+    <h1>화폐단위표본추출 (MUS)</h1>
+    <p class="sub">선택 범위(없으면 사용 영역)에서 결정론 표본을 뽑아 새 시트에 출력합니다. 계산은 전부 로컬 WASM 코어.</p>
+
+    <button id="refresh" class="secondary" type="button">열 목록 새로고침</button>
+
+    <div class="row">
+      <label for="amount-col">금액열</label>
+      <select id="amount-col"><option value="">— 열 목록 새로고침 —</option></select>
+    </div>
+
+    <div class="row">
+      <label for="pm">수행중요성 (PM)</label>
+      <input id="pm" type="text" inputmode="decimal" placeholder="예: 1,000,000" />
+    </div>
+
+    <div class="row">
+      <label for="confidence">신뢰수준</label>
+      <select id="confidence">
+        <option value="0.90">90%</option>
+        <option value="0.95" selected>95% (권장)</option>
+        <option value="0.99">99%</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label for="seed">시드 (재현용)</label>
+      <input id="seed" type="number" min="0" step="1" value="42" />
+    </div>
+
+    <button id="run" type="button" disabled>추출</button>
+    <div id="status" class="status"></div>
+
+    <script type="module" src="./taskpane.ts"></script>
+  </body>
+</html>

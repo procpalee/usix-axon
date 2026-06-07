@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/axon-core", "crates/axon-ledger", "src-tauri"]
+members = ["crates/axon-core", "crates/axon-ledger", "crates/axon-wasm", "src-tauri"]
 
 # 어댑터/엔진:
 #   "crates/axon-core"   — 순수 결정론 코어 (wasm-ready, 폴라스 절대 금지)

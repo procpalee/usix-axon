@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# WASM 산출물 — `npm run wasm` 으로 재생성 (axon-core 단일 소스).
+src/wasm-pkg/

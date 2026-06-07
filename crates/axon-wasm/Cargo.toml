@@ -1,0 +1,33 @@
+[package]
+name = "axon-wasm"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+# cdylib = wasm 산출. rlib = 네이티브 cargo test(스모크) 가능하게.
+crate-type = ["cdylib", "rlib"]
+
+# wasm-opt(binaryen) 다운로드를 끈다 — CI/오프라인 환경에서 네트워크 차단 시 빌드 실패 방지.
+# 릴리스 최적화가 필요하면 binaryen 설치 후 켤 것.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[dependencies]
+axon-core = { path = "../axon-core" }   # 어댑터 → 코어 (순수 MUS 단일 소스)
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+
+# wasm-bindgen 생성 코드가 unsafe 를 쓴다 — 어댑터 단위 opt-out.
+# 워크스페이스 정책(unsafe_code = "deny")이 명시 허용하는 예외(Cargo.toml 주석).
+# 주의: per-crate [lints] 는 워크스페이스 lints 를 병합이 아니라 '대체'한다.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+# 워크스페이스에서 상속되지 않으므로 흔적·미완성 코드 가드만 재선언.
+todo = "warn"
+dbg_macro = "warn"

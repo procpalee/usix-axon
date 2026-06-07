@@ -1,0 +1,26 @@
+{
+  "name": "axon-excel-mus",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "axon MUS(화폐단위표본추출) 엑셀 작업창 애드인 — axon-core 결정론 코어를 WASM 으로 호출",
+  "scripts": {
+    "wasm": "wasm-pack build ../../crates/axon-wasm --target web --out-dir ../../addins/excel-mus/src/wasm-pkg",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "office-addin-debugging start manifest.xml",
+    "stop": "office-addin-debugging stop manifest.xml",
+    "validate": "office-addin-manifest validate manifest.xml",
+    "certs": "office-addin-dev-certs install"
+  },
+  "devDependencies": {
+    "@types/office-js": "^1.0.392",
+    "office-addin-cli": "^2.0.0",
+    "office-addin-debugging": "^6.0.0",
+    "office-addin-dev-certs": "^2.0.0",
+    "office-addin-manifest": "^2.0.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  }
+}
