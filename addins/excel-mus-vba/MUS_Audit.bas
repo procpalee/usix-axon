@@ -22,6 +22,7 @@ Private Const H_AUDIT As String = "Audit_Value"
 Private Const H_TAINT As String = "Tainting"
 Private Const H_PROJ As String = "Projected_MS"
 Private Const MARKER As String = "===== Evaluation ====="
+Private Const HELP_SHEET As String = "MUS_Help"
 
 Public Sub MUS_Sample()
     Dim rng As Range
@@ -403,6 +404,68 @@ Private Sub WriteLog(runId As Long, itemName As String, srcSheet As String, srcR
     lg.Cells(r, 21).Value = resultSheet
 End Sub
 
+' --- in-app help: builds a "MUS_Help" sheet with detailed usage ---
+Public Sub MUS_Help()
+    Dim ws As Worksheet
+    On Error Resume Next
+    Set ws = ActiveWorkbook.Worksheets(HELP_SHEET)
+    On Error GoTo 0
+    If ws Is Nothing Then
+        Set ws = ActiveWorkbook.Worksheets.Add
+        ws.Name = HELP_SHEET
+    Else
+        ws.Cells.Clear
+    End If
+    ws.Tab.Color = RGB(112, 173, 71)
+
+    Dim L As Long: L = 1
+    HL ws, L, "axon MUS - How to use", True
+    HL ws, L, "", False
+    HL ws, L, "1. Overview", True
+    HL ws, L, "MUS (Monetary Unit Sampling / PPS) draws a sample where larger amounts have a higher chance of selection. All math runs locally and deterministically.", False
+    HL ws, L, "", False
+    HL ws, L, "2. Prepare", True
+    HL ws, L, "Put your data on a sheet; the top row must be the header. The amount column should contain numbers (only positive amounts form the population).", False
+    HL ws, L, "", False
+    HL ws, L, "3. Sampling  -  [MUS Sample] button", True
+    HL ws, L, "You are asked in order: (1) data range  (2) amount column number  (3) performance materiality PM  (4) confidence 0.90/0.95/0.99  (5) seed  (6) item name.", False
+    HL ws, L, "A sheet 'MUS_<item>' is created with a blue tab. Cell A1 holds a NOTE with the summary. One row is appended to the MUS_Log sheet.", False
+    HL ws, L, "Result columns: Type (Key Item = examined 100% / PPS Sample = systematic), Book_Value, Audit_Value (you fill in), Tainting, Projected_MS.", False
+    HL ws, L, "", False
+    HL ws, L, "4. Evaluation  -  [MUS Evaluate] button", True
+    HL ws, L, "Examine each sampled item and enter the audited amount in the Audit_Value column. Then click [MUS Evaluate] to refresh Projected misstatement, Upper error limit (UEL) and Verdict in the A1 note.", False
+    HL ws, L, "Verdict: UEL <= PM -> Acceptable; otherwise Further audit work needed. Re-run [MUS Evaluate] whenever you change an Audit_Value.", False
+    HL ws, L, "", False
+    HL ws, L, "5. Key terms", True
+    HL ws, L, "PM (performance materiality): the tolerable misstatement threshold.", False
+    HL ws, L, "Confidence: assurance level (95% typical); higher = larger sample.", False
+    HL ws, L, "Sampling interval = PM / reliability factor R. Amounts >= interval are Key Items (100% examined).", False
+    HL ws, L, "Basic precision = interval x R: the upper limit when no errors are found.", False
+    HL ws, L, "Tainting = (Book - Audit) / Book.  Projected misstatement = tainting x interval.", False
+    HL ws, L, "Upper error limit (UEL) = basic precision + projected misstatements weighted by ranked incremental reliability factors + key-item actual differences.", False
+    HL ws, L, "", False
+    HL ws, L, "6. Reproducibility / log", True
+    HL ws, L, "The same (range, PM, confidence, seed) always yields the same sample. Seed and random start are recorded in the note and MUS_Log so the sample can be reproduced.", False
+    HL ws, L, "MUS_Log is a cumulative audit trail: one row per run across the whole workbook.", False
+    HL ws, L, "", False
+    HL ws, L, "7. Notes", True
+    HL ws, L, "Randomness uses Excel Rnd (seeded): reproducible within this tool, but not identical to IDEA/ACL.", False
+    HL ws, L, "Confirm alignment with your firm's audit methodology before using as audit evidence.", False
+
+    ws.Columns(1).ColumnWidth = 95
+    ws.Range(ws.Cells(1, 1), ws.Cells(L - 1, 1)).WrapText = True
+    ws.Range("A1").Font.Size = 14
+    ws.Rows.AutoFit
+    ws.Activate
+    ws.Range("A1").Select
+End Sub
+
+Private Sub HL(ws As Worksheet, ByRef L As Long, text As String, bold As Boolean)
+    ws.Cells(L, 1).Value = text
+    ws.Cells(L, 1).Font.bold = bold
+    L = L + 1
+End Sub
+
 Public Sub Auto_Open()
     On Error Resume Next
     Application.CommandBars("axon MUS").Delete
@@ -415,6 +478,9 @@ Public Sub Auto_Open()
     Dim b2 As CommandBarButton
     Set b2 = cb.Controls.Add(Type:=msoControlButton)
     b2.Caption = "MUS Evaluate": b2.Style = msoButtonCaption: b2.OnAction = "MUS_Evaluate"
+    Dim b3 As CommandBarButton
+    Set b3 = cb.Controls.Add(Type:=msoControlButton)
+    b3.Caption = "MUS Help": b3.Style = msoButtonCaption: b3.OnAction = "MUS_Help"
     cb.Visible = True
 End Sub
 

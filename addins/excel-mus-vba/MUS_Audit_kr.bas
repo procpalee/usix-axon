@@ -21,6 +21,7 @@ Private Const H_AUDIT As String = "감사가"
 Private Const H_TAINT As String = "오염률"
 Private Const H_PROJ As String = "추정왜곡"
 Private Const MARKER As String = "===== 평가 ====="
+Private Const HELP_SHEET As String = "MUS_사용법"
 
 Public Sub MUS_Sample()
     Dim rng As Range
@@ -395,6 +396,68 @@ Private Sub WriteLog(runId As Long, itemName As String, srcSheet As String, srcR
     lg.Cells(r, 21).Value = resultSheet
 End Sub
 
+' --- 추가기능 도움말: "MUS_사용법" 시트에 상세 사용법 생성 ---
+Public Sub MUS_Help()
+    Dim ws As Worksheet
+    On Error Resume Next
+    Set ws = ActiveWorkbook.Worksheets(HELP_SHEET)
+    On Error GoTo 0
+    If ws Is Nothing Then
+        Set ws = ActiveWorkbook.Worksheets.Add
+        ws.Name = HELP_SHEET
+    Else
+        ws.Cells.Clear
+    End If
+    ws.Tab.Color = RGB(112, 173, 71)
+
+    Dim L As Long: L = 1
+    HL ws, L, "axon MUS - 사용법", True
+    HL ws, L, "", False
+    HL ws, L, "1. 개요", True
+    HL ws, L, "MUS(화폐단위표본추출, PPS)는 금액이 큰 거래일수록 뽑힐 확률이 높은 감사 표본추출 기법입니다. 모든 수치 계산은 로컬에서 결정론으로 처리됩니다.", False
+    HL ws, L, "", False
+    HL ws, L, "2. 준비", True
+    HL ws, L, "분석할 데이터를 시트에 두고, 맨 윗줄은 반드시 제목(헤더) 행이어야 합니다. 금액 열에는 숫자만 두세요(양수만 모집단).", False
+    HL ws, L, "", False
+    HL ws, L, "3. 표본추출  -  [MUS 표본추출] 버튼", True
+    HL ws, L, "순서대로 묻습니다: (1) 데이터 범위  (2) 금액열 번호  (3) 수행중요성 PM  (4) 신뢰수준 0.90/0.95/0.99  (5) 시드  (6) 항목 이름.", False
+    HL ws, L, "실행하면 'MUS_<항목>' 시트가 생기고 탭이 파란색으로 표시됩니다. A1 셀의 노트에 요약(파라미터/표본수)이 들어가고, MUS_Log 시트에 실행 한 줄이 기록됩니다.", False
+    HL ws, L, "결과 표 열: 유형(고액항목=전수검사 / PPS표본=체계추출), 장부가, 감사가(직접 입력), 오염률, 추정왜곡.", False
+    HL ws, L, "", False
+    HL ws, L, "4. 평가  -  [MUS 평가] 버튼", True
+    HL ws, L, "표본 항목을 검토해 실제 금액을 '감사가' 열에 입력합니다. 그다음 [MUS 평가]를 누르면 A1 노트의 추정왜곡/상한오차(UEL)/판정이 다시 계산됩니다.", False
+    HL ws, L, "판정: UEL <= PM 이면 '수용 가능', 크면 '추가 절차 필요'. 감사가를 수정할 때마다 [MUS 평가]를 다시 누르세요.", False
+    HL ws, L, "", False
+    HL ws, L, "5. 주요 용어", True
+    HL ws, L, "PM(수행중요성): 이 금액까지 틀려도 결론에 영향 없다는 한계선(허용왜곡표시).", False
+    HL ws, L, "신뢰수준: 결론의 확신 정도(95% 권장). 높을수록 표본이 많아집니다.", False
+    HL ws, L, "표본간격 = PM / 신뢰계수(R). 이 간격 이상 금액은 고액항목으로 전수검사.", False
+    HL ws, L, "기본정밀도 = 표본간격 x R. 오류가 없을 때의 상한오차.", False
+    HL ws, L, "오염률 = (장부가 - 감사가) / 장부가.  추정왜곡 = 오염률 x 표본간격.", False
+    HL ws, L, "상한오차(UEL) = 기본정밀도 + 순위별 증분 신뢰계수로 가중한 추정왜곡 합 + 고액항목 실차이.", False
+    HL ws, L, "", False
+    HL ws, L, "6. 재현성 / 로그", True
+    HL ws, L, "같은 (범위/PM/신뢰수준/시드)면 항상 같은 표본이 나옵니다. 시드와 랜덤시작점이 노트와 MUS_Log에 기록되어 재수행 시 동일 표본을 재현할 수 있습니다.", False
+    HL ws, L, "MUS_Log 시트는 통합문서의 모든 실행 이력을 한 줄씩 쌓는 누적 감사추적 대장입니다.", False
+    HL ws, L, "", False
+    HL ws, L, "7. 주의", True
+    HL ws, L, "난수는 엑셀 Rnd(시드 기반)이라 도구 내 재현은 보장되지만 IDEA/ACL 등 타 도구와 표본 숫자가 동일하지는 않습니다.", False
+    HL ws, L, "실제 감사증거로 쓰기 전 소속 법인의 감사방법론 부합 여부를 검토하세요.", False
+
+    ws.Columns(1).ColumnWidth = 95
+    ws.Range(ws.Cells(1, 1), ws.Cells(L - 1, 1)).WrapText = True
+    ws.Range("A1").Font.Size = 14
+    ws.Rows.AutoFit
+    ws.Activate
+    ws.Range("A1").Select
+End Sub
+
+Private Sub HL(ws As Worksheet, ByRef L As Long, text As String, bold As Boolean)
+    ws.Cells(L, 1).Value = text
+    ws.Cells(L, 1).Font.bold = bold
+    L = L + 1
+End Sub
+
 Public Sub Auto_Open()
     On Error Resume Next
     Application.CommandBars("axon MUS").Delete
@@ -407,6 +470,9 @@ Public Sub Auto_Open()
     Dim b2 As CommandBarButton
     Set b2 = cb.Controls.Add(Type:=msoControlButton)
     b2.Caption = "MUS 평가": b2.Style = msoButtonCaption: b2.OnAction = "MUS_Evaluate"
+    Dim b3 As CommandBarButton
+    Set b3 = cb.Controls.Add(Type:=msoControlButton)
+    b3.Caption = "MUS 도움말": b3.Style = msoButtonCaption: b3.OnAction = "MUS_Help"
     cb.Visible = True
 End Sub
 
