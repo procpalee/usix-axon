@@ -2,83 +2,73 @@ Attribute VB_Name = "MUS"
 Option Explicit
 
 ' ============================================================
-'  axon MUS - Monetary Unit Sampling (PPS) for audit evidence
-'  Pure VBA, ASCII only (no locale/encoding issues).
-'  Conforms to ISA 530 / AICPA MUS sampling + evaluation.
+'  axon MUS - 화폐단위표본추출(PPS) 감사용  (한글 UI)
+'  순수 VBA. ISA 530 / AICPA MUS 표본추출 + 평가 준거.
 ' ------------------------------------------------------------
-'  Macros:
-'   MUS_Sample   - draw the sample, write a self-documenting
-'                  working paper sheet, append an audit log row.
-'   MUS_Evaluate - run on a result sheet AFTER entering Audit_Value
-'                  values; recomputes the precise upper error limit
-'                  (UEL) using ranked incremental reliability factors,
-'                  and the accept/reject verdict.
+'  매크로
+'   MUS_Sample   - 표본을 뽑아 자기문서화 조서 시트를 만들고
+'                  실행 로그를 남긴다.
+'   MUS_Evaluate - 감사가(Audit_Value) 입력 후 결과 시트에서 실행.
+'                  순위별 증분 신뢰계수로 상한오차(UEL)와 판정을 정밀 재계산.
 '
-'  Planning:
-'   R0  = reliability factor at 0 expected errors (Poisson)
-'   interval = PM / R0 ;  amount >= interval -> Key Item (100% examined)
-'   amount < interval  -> systematic PPS selection from a seeded start
-'
-'  Evaluation (precise, AICPA incremental method):
-'   Basic precision = R0 * interval
-'   For each PPS misstatement (book < interval), ranked by tainting desc:
-'     tainting_j  = (Book - Audit) / Book
-'     projected_j = tainting_j * interval
-'     incr_j      = R(j) - R(j-1)            ' incremental reliability factor
-'   UEL = Basic precision + SUM( projected_j * incr_j ) + key-item actuals
-'   Verdict: UEL <= PM -> Acceptable, else Further audit work needed
-'
-'  Deterministic: same (range, PM, confidence, seed) = same sample.
-'  Every run is recorded on the "MUS_Log" sheet (audit trail).
+'  계획: R0 = 오류 0건 신뢰계수(포아송), 표본간격 = PM / R0.
+'        금액 >= 간격 -> 고액항목(전수), 미만 -> 시드 기반 체계적 추출.
+'  평가(AICPA 증분법):
+'        기본정밀도 = R0 * 간격
+'        오염률 = (장부가-감사가)/장부가, 추정왜곡 = 오염률 * 간격
+'        증분계수 incr_j = R(j) - R(j-1)  (오염률 내림차순 순위)
+'        UEL = 기본정밀도 + SUM(추정왜곡_j * incr_j) + 고액항목 실액
+'        판정: UEL <= PM 이면 수용 가능.
+'  결정론: 같은 (범위/PM/신뢰수준/시드) = 같은 표본. 실행마다 MUS_Log 기록.
 ' ============================================================
 
 Private Const LOG_SHEET As String = "MUS_Log"
-Private Const T_KEY As String = "Key Item"
-Private Const T_PPS As String = "PPS Sample"
-Private Const H_TYPE As String = "Type"
-Private Const H_BOOK As String = "Book_Value"
-Private Const H_AUDIT As String = "Audit_Value"
-Private Const H_TAINT As String = "Tainting"
-Private Const H_PROJ As String = "Projected_MS"
+Private Const T_KEY As String = "고액항목"
+Private Const T_PPS As String = "PPS표본"
+Private Const H_TYPE As String = "유형"
+Private Const H_BOOK As String = "장부가"
+Private Const H_AUDIT As String = "감사가"
+Private Const H_TAINT As String = "오염률"
+Private Const H_PROJ As String = "추정왜곡"
 
 Public Sub MUS_Sample()
     Dim rng As Range
     On Error Resume Next
     Set rng = Application.InputBox( _
-        "Select the data range (top row = header).", _
-        "MUS - Range", Selection.Address, Type:=8)
+        "데이터 범위를 선택하세요 (맨 윗줄 = 헤더 포함).", _
+        "MUS - 범위", Selection.Address, Type:=8)
     On Error GoTo 0
     If rng Is Nothing Then Exit Sub
 
     Dim srcWs As Worksheet: Set srcWs = rng.Worksheet
     Dim data As Variant: data = rng.Value
-    If Not IsArray(data) Then MsgBox "Select multiple rows.", vbExclamation: Exit Sub
+    If Not IsArray(data) Then MsgBox "여러 행을 선택하세요.", vbExclamation: Exit Sub
     Dim nRows As Long, nCols As Long
     nRows = UBound(data, 1): nCols = UBound(data, 2)
-    If nRows < 2 Then MsgBox "Need header + data (>=2 rows).", vbExclamation: Exit Sub
+    If nRows < 2 Then MsgBox "헤더 + 데이터 최소 2행 필요.", vbExclamation: Exit Sub
 
     Dim headers As String, c As Long
     For c = 1 To nCols
         headers = headers & c & ".  " & data(1, c) & vbCrLf
     Next c
     Dim s As String
-    s = InputBox("Amount column number:" & vbCrLf & vbCrLf & headers, "MUS - Amount column")
+    s = InputBox("금액열 번호:" & vbCrLf & vbCrLf & headers, "MUS - 금액열")
     If Not IsNumeric(s) Then Exit Sub
     Dim amtCol As Long: amtCol = CLng(s)
-    If amtCol < 1 Or amtCol > nCols Then MsgBox "Enter 1 to " & nCols & ".", vbExclamation: Exit Sub
+    If amtCol < 1 Or amtCol > nCols Then MsgBox "1 ~ " & nCols & " 범위로 입력하세요.", vbExclamation: Exit Sub
 
-    s = InputBox("Performance materiality (PM / tolerable misstatement):", "MUS - PM", "1000000")
+    s = InputBox("수행중요성 (PM / 허용왜곡표시):", "MUS - PM", "1000000")
     If Not IsNumeric(s) Then Exit Sub
     Dim pm As Double: pm = CDbl(s)
-    If pm <= 0 Then MsgBox "PM must be positive.", vbExclamation: Exit Sub
+    If pm <= 0 Then MsgBox "PM 은 양수여야 합니다.", vbExclamation: Exit Sub
 
-    s = InputBox("Confidence (0.90 / 0.95 / 0.99):", "MUS - Confidence", "0.95")
+    s = InputBox("신뢰수준 (0.90 / 0.95 / 0.99):", "MUS - 신뢰수준", "0.95")
     If Not IsNumeric(s) Then Exit Sub
     Dim conf As Double: conf = CDbl(s)
     If conf < 0.5 Then conf = 0.5
     If conf > 0.999 Then conf = 0.999
 
-    s = InputBox("Seed (same seed = same sample, for reproducibility):", "MUS - Seed", "42")
+    s = InputBox("시드 (같은 시드 = 같은 표본, 재현용):", "MUS - 시드", "42")
     If Not IsNumeric(s) Then Exit Sub
     Dim seed As Double: seed = CDbl(s)
 
@@ -134,7 +124,7 @@ Public Sub MUS_Sample()
         Next j
     End If
 
-    If nSel = 0 Then MsgBox "No sample selected. Check PM / amount column.", vbExclamation: Exit Sub
+    If nSel = 0 Then MsgBox "표본이 선택되지 않았습니다. PM / 금액열 확인.", vbExclamation: Exit Sub
     Dim basicPrec As Double: basicPrec = interval * rf
 
     Dim ws As Worksheet: Set ws = ActiveWorkbook.Worksheets.Add
@@ -143,31 +133,31 @@ Public Sub MUS_Sample()
     ws.Name = "MUS run" & runId
     On Error GoTo 0
 
-    Dim HR As Long: HR = 26                          ' table header row
-    ws.Range("A1").Value = "axon MUS - Working Paper"
-    PutP ws, 2, "Run ID", runId
-    PutP ws, 3, "Run time", Format(Now, "yyyy-mm-dd hh:nn:ss")
-    PutP ws, 4, "Performed by", Environ$("USERNAME")
-    PutP ws, 5, "Workbook", ActiveWorkbook.Name
-    PutP ws, 6, "Source sheet", srcWs.Name
-    PutP ws, 7, "Source range", rng.Address(False, False)
-    PutP ws, 8, "Amount column", CStr(data(1, amtCol))
-    PutP ws, 9, "Population count (positive)", popN
-    PutP ws, 10, "Population total", popTotal
-    PutP ws, 11, "Performance materiality (PM)", pm
-    PutP ws, 12, "Confidence", conf
-    PutP ws, 13, "Reliability factor R0", rf
-    PutP ws, 14, "Sampling interval", interval
-    PutP ws, 15, "Seed", seed
-    PutP ws, 16, "Random start", startPt
-    PutP ws, 17, "Key items", nKey
-    PutP ws, 18, "PPS samples", nSel - nKey
-    PutP ws, 19, "Sample size", nSel
-    PutP ws, 20, "Basic precision", basicPrec
-    PutP ws, 21, "Projected misstatement", 0
-    PutP ws, 22, "Incremental allowance", 0
-    PutP ws, 23, "Upper error limit (UEL)", basicPrec
-    PutP ws, 24, "Verdict (run MUS_Evaluate after audit)", ""
+    Dim HR As Long: HR = 26
+    ws.Range("A1").Value = "axon MUS - 감사조서"
+    PutP ws, 2, "실행ID", runId
+    PutP ws, 3, "실행시각", Format(Now, "yyyy-mm-dd hh:nn:ss")
+    PutP ws, 4, "수행자", Environ$("USERNAME")
+    PutP ws, 5, "통합문서", ActiveWorkbook.Name
+    PutP ws, 6, "원본시트", srcWs.Name
+    PutP ws, 7, "원본범위", rng.Address(False, False)
+    PutP ws, 8, "금액열", CStr(data(1, amtCol))
+    PutP ws, 9, "모집단 건수(양수)", popN
+    PutP ws, 10, "모집단 총액", popTotal
+    PutP ws, 11, "수행중요성(PM)", pm
+    PutP ws, 12, "신뢰수준", conf
+    PutP ws, 13, "신뢰계수 R0", rf
+    PutP ws, 14, "표본간격", interval
+    PutP ws, 15, "시드", seed
+    PutP ws, 16, "랜덤시작점", startPt
+    PutP ws, 17, "고액항목 수", nKey
+    PutP ws, 18, "PPS표본 수", nSel - nKey
+    PutP ws, 19, "표본 크기", nSel
+    PutP ws, 20, "기본정밀도", basicPrec
+    PutP ws, 21, "추정왜곡표시", 0
+    PutP ws, 22, "증분허용오차", 0
+    PutP ws, 23, "상한오차(UEL)", basicPrec
+    PutP ws, 24, "판정 (감사가 입력 후 MUS_Evaluate 실행)", ""
 
     For c = 1 To nCols
         ws.Cells(HR, c).Value = data(1, c)
@@ -187,7 +177,7 @@ Public Sub MUS_Sample()
         Next c
         ws.Cells(rowAbs, nCols + 1).Value = selType(r)
         ws.Cells(rowAbs, nCols + 2).Value = data(srcRow, amtCol)
-        ws.Cells(rowAbs, nCols + 3).Value = data(srcRow, amtCol)   ' Audit_Value (auditor edits)
+        ws.Cells(rowAbs, nCols + 3).Value = data(srcRow, amtCol)
         ws.Cells(rowAbs, nCols + 4).FormulaR1C1 = "=IF(RC[-2]>0,(RC[-2]-RC[-1])/RC[-2],0)"
         If selType(r) = T_KEY Then
             ws.Cells(rowAbs, nCols + 5).FormulaR1C1 = "=RC[-3]-RC[-2]"
@@ -200,41 +190,38 @@ Public Sub MUS_Sample()
     ws.Range("A1").Font.Bold = True
     ws.Rows(HR).Font.Bold = True
 
-    EvaluateSheet ws    ' initial fill (0 errors -> UEL = basic precision)
+    EvaluateSheet ws
 
     WriteLog runId, srcWs.Name, rng.Address(False, False), CStr(data(1, amtCol)), _
              popN, popTotal, pm, conf, rf, interval, seed, startPt, _
              nKey, nSel - nKey, nSel, basicPrec, ws.Name
 
     Application.Goto ws.Range("A1"), True
-    MsgBox "Sample: " & nSel & " (Key " & nKey & " / PPS " & (nSel - nKey) & ")" & vbCrLf & _
-           "Sheet: " & ws.Name & "   Logged as run " & runId & " on '" & LOG_SHEET & "'." & vbCrLf & vbCrLf & _
-           "Next: fill the Audit_Value column, then run MUS_Evaluate to get the precise UEL.", _
+    MsgBox "표본 " & nSel & "건 (고액 " & nKey & " / PPS " & (nSel - nKey) & ")" & vbCrLf & _
+           "시트: " & ws.Name & "   로그: run " & runId & " ('" & LOG_SHEET & "')." & vbCrLf & vbCrLf & _
+           "다음: 감사가 열을 입력한 뒤 MUS_Evaluate 로 정밀 UEL 을 계산하세요.", _
            vbInformation, "axon MUS"
 End Sub
 
-' Recompute the precise UEL (ranked incremental method) on the active sheet.
 Public Sub MUS_Evaluate()
     On Error GoTo fail
     EvaluateSheet ActiveSheet
     Application.Goto ActiveSheet.Range("A20"), True
-    MsgBox "Evaluation updated (cells B21..B24)." & vbCrLf & _
-           "UEL uses ranked incremental reliability factors." & vbCrLf & _
-           "If UEL <= PM the population is acceptable; otherwise extend procedures.", _
-           vbInformation, "axon MUS - Evaluate"
+    MsgBox "평가 갱신됨 (B21..B24)." & vbCrLf & _
+           "UEL 은 순위별 증분 신뢰계수를 적용합니다." & vbCrLf & _
+           "UEL <= PM 이면 수용 가능, 아니면 추가 절차가 필요합니다.", _
+           vbInformation, "axon MUS - 평가"
     Exit Sub
 fail:
-    MsgBox "Run this on a MUS result sheet (one made by MUS_Sample).", vbExclamation
+    MsgBox "MUS_Sample 로 만든 결과 시트에서 실행하세요.", vbExclamation
 End Sub
 
-' --- core evaluation: ranked incremental UEL written to B20..B24 ---
 Private Sub EvaluateSheet(ws As Worksheet)
     Dim pm As Double: pm = ws.Range("B11").Value
     Dim conf As Double: conf = ws.Range("B12").Value
     Dim r0 As Double: r0 = ws.Range("B13").Value
     Dim interval As Double: interval = ws.Range("B14").Value
 
-    ' locate the table by its Book_Value header
     Dim found As Range
     Set found = ws.Cells.Find(What:=H_BOOK, LookAt:=xlWhole, MatchCase:=True)
     If found Is Nothing Then Err.Raise 5
@@ -242,7 +229,6 @@ Private Sub EvaluateSheet(ws As Worksheet)
     HR = found.Row: bookCol = found.Column
     typeCol = bookCol - 1: auditCol = bookCol + 1
 
-    ' collect PPS overstatement projections + key-item actual overstatements
     Dim proj() As Double: ReDim proj(1 To 1)
     Dim m As Long: m = 0
     Dim keyActual As Double
@@ -266,7 +252,6 @@ Private Sub EvaluateSheet(ws As Worksheet)
         r = r + 1
     Loop
 
-    ' rank projections descending
     Dim i As Long, j As Long, tmp As Double
     For i = 1 To m - 1
         For j = 1 To m - i
@@ -276,7 +261,6 @@ Private Sub EvaluateSheet(ws As Worksheet)
         Next j
     Next i
 
-    ' incremental reliability factors: incr_j = R(j) - R(j-1)
     Dim basicPrec As Double: basicPrec = r0 * interval
     Dim rankedSum As Double, projPPS As Double, incr As Double
     Dim rPrev As Double, rCur As Double
@@ -297,16 +281,14 @@ Private Sub EvaluateSheet(ws As Worksheet)
     ws.Range("B21").Value = projectedTotal
     ws.Range("B22").Value = incrementalAllow
     ws.Range("B23").Value = uel
-    ws.Range("A24").Value = "Verdict"
+    ws.Range("A24").Value = "판정"
     If uel <= pm Then
-        ws.Range("B24").Value = "Acceptable (UEL <= PM)"
+        ws.Range("B24").Value = "수용 가능 (UEL <= PM)"
     Else
-        ws.Range("B24").Value = "Further audit work needed (UEL > PM)"
+        ws.Range("B24").Value = "추가 절차 필요 (UEL > PM)"
     End If
 End Sub
 
-' --- reliability factor R(k): Poisson, no worksheet-function dependency ---
-' R(k) = x such that Poisson CDF(k; mean=x) = 1 - conf.  R(0) = -ln(1-conf).
 Private Function ReliabilityFactor(ByVal conf As Double, ByVal k As Long) As Double
     Dim target As Double: target = 1# - conf
     Dim lo As Double, hi As Double, mid As Double, it As Long
@@ -314,7 +296,7 @@ Private Function ReliabilityFactor(ByVal conf As Double, ByVal k As Long) As Dou
     For it = 1 To 200
         mid = (lo + hi) / 2#
         If PoissonCDF(k, mid) > target Then
-            lo = mid          ' CDF decreases in x: too high -> increase x
+            lo = mid
         Else
             hi = mid
         End If
@@ -335,7 +317,6 @@ Private Function SafeNum(v As Variant) As Double
     If IsNumeric(v) Then SafeNum = CDbl(v) Else SafeNum = 0#
 End Function
 
-' --- helpers ---
 Private Sub PutP(ws As Worksheet, rowN As Long, label As String, v As Variant)
     ws.Cells(rowN, 1).Value = label
     ws.Cells(rowN, 2).Value = v
@@ -356,10 +337,10 @@ Private Function LogSheet() As Worksheet
         Set lg = ActiveWorkbook.Worksheets.Add
         lg.Name = LOG_SHEET
         Dim hdr As Variant, k As Long
-        hdr = Array("Run_ID", "Timestamp", "User", "Workbook", "Source_Sheet", _
-            "Source_Range", "Amount_Col", "Pop_Count", "Pop_Total", "PM", _
-            "Confidence", "R_Factor", "Interval", "Seed", "Random_Start", _
-            "Key_Items", "PPS_Samples", "Sample_Size", "Basic_Precision", "Result_Sheet")
+        hdr = Array("실행ID", "시각", "사용자", "통합문서", "원본시트", _
+            "원본범위", "금액열", "모집단건수", "모집단총액", "PM", _
+            "신뢰수준", "신뢰계수", "표본간격", "시드", "랜덤시작점", _
+            "고액항목", "PPS표본", "표본크기", "기본정밀도", "결과시트")
         For k = 0 To UBound(hdr)
             lg.Cells(1, k + 1).Value = hdr(k)
         Next k
@@ -396,10 +377,6 @@ Private Sub WriteLog(runId As Long, srcSheet As String, srcRange As String, amtN
     lg.Cells(r, 20).Value = resultSheet
 End Sub
 
-' ============================================================
-'  Add-in (.xlam) ribbon button - appears under the "Add-ins" tab
-'  when this file is loaded as an Excel Add-in. Pure VBA, no XML.
-' ============================================================
 Public Sub Auto_Open()
     On Error Resume Next
     Application.CommandBars("axon MUS").Delete
@@ -408,10 +385,10 @@ Public Sub Auto_Open()
     Set cb = Application.CommandBars.Add(Name:="axon MUS", Position:=msoBarTop, Temporary:=True)
     Dim b As CommandBarButton
     Set b = cb.Controls.Add(Type:=msoControlButton)
-    b.Caption = "MUS Sample": b.Style = msoButtonCaption: b.OnAction = "MUS_Sample"
+    b.Caption = "MUS 표본추출": b.Style = msoButtonCaption: b.OnAction = "MUS_Sample"
     Dim b2 As CommandBarButton
     Set b2 = cb.Controls.Add(Type:=msoControlButton)
-    b2.Caption = "MUS Evaluate": b2.Style = msoButtonCaption: b2.OnAction = "MUS_Evaluate"
+    b2.Caption = "MUS 평가": b2.Style = msoButtonCaption: b2.OnAction = "MUS_Evaluate"
     cb.Visible = True
 End Sub
 
