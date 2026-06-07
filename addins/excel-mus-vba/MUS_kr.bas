@@ -2,83 +2,83 @@ Attribute VB_Name = "MUS"
 Option Explicit
 
 ' ============================================================
-'  axon MUS - í™”íë‹¨ìœ„í‘œë³¸ì¶”ì¶œ (PPS)  /  ìˆœìˆ˜ VBA, ì„¤ì¹˜ ì˜ì¡´ì„± 0
+'  axon MUS - È­Æó´ÜÀ§Ç¥º»ÃßÃâ (PPS)  /  ¼ø¼ö VBA, ¼³Ä¡ ÀÇÁ¸¼º 0
 ' ------------------------------------------------------------
-'  ì‚¬ìš©ë²•
-'   1) ë°ì´í„°(ë§¨ ìœ—ì¤„ = ì œëª© í—¤ë”)ë¥¼ ì‹œíŠ¸ì— ë‘”ë‹¤.
-'   2) Alt+F8 -> "MUS_í‘œë³¸ì¶”ì¶œ" ì‹¤í–‰ (ë˜ëŠ” ë²„íŠ¼ì— ì—°ê²°).
-'   3) ë²”ìœ„/ê¸ˆì•¡ì—´/PM/ì‹ ë¢°ìˆ˜ì¤€/ì‹œë“œë¥¼ ì…ë ¥í•˜ë©´
-'      ìƒˆ ì‹œíŠ¸ì— Key Item(ê³ ì•¡ ì „ìˆ˜) + PPS í‘œë³¸ì„ ì¶œë ¥í•œë‹¤.
+'  »ç¿ë¹ı
+'   1) µ¥ÀÌÅÍ(¸Ç À­ÁÙ = Á¦¸ñ Çì´õ)¸¦ ½ÃÆ®¿¡ µĞ´Ù.
+'   2) Alt+F8 -> "MUS_Ç¥º»ÃßÃâ" ½ÇÇà (¶Ç´Â ¹öÆ°¿¡ ¿¬°á).
+'   3) ¹üÀ§/±İ¾×¿­/PM/½Å·Ú¼öÁØ/½Ãµå¸¦ ÀÔ·ÂÇÏ¸é
+'      »õ ½ÃÆ®¿¡ Key Item(°í¾× Àü¼ö) + PPS Ç¥º»À» Ãâ·ÂÇÑ´Ù.
 '
-'  ê²°ì •ë¡ : ê°™ì€ (ë²”ìœ„/PM/ì‹œë“œ) = í•­ìƒ ê°™ì€ í‘œë³¸ (ê°ì‚¬ì¡°ì„œ ì¬í˜„ìš©).
-'  R(ì‹ ë¢°ê³„ìˆ˜) = -ln(1 - ì‹ ë¢°ìˆ˜ì¤€), ê¸°ëŒ€ì˜¤ë¥˜ 0ê±´ ê¸°ì¤€ í¬ì•„ì†¡.
-'  interval = PM / R. interval ì´ìƒ = Key Item ì „ìˆ˜,
-'  ë‚˜ë¨¸ì§€ëŠ” ì‹œë“œ ê¸°ë°˜ ì‹œì‘ì ì—ì„œ interval ê°„ê²© ì²´ê³„ì  ì¶”ì¶œ.
+'  °áÁ¤·Ğ: °°Àº (¹üÀ§/PM/½Ãµå) = Ç×»ó °°Àº Ç¥º» (°¨»çÁ¶¼­ ÀçÇö¿ë).
+'  R(½Å·Ú°è¼ö) = -ln(1 - ½Å·Ú¼öÁØ), ±â´ë¿À·ù 0°Ç ±âÁØ Æ÷¾Æ¼Û.
+'  interval = PM / R. interval ÀÌ»ó = Key Item Àü¼ö,
+'  ³ª¸ÓÁö´Â ½Ãµå ±â¹İ ½ÃÀÛÁ¡¿¡¼­ interval °£°İ Ã¼°èÀû ÃßÃâ.
 ' ============================================================
 
-Public Sub MUS_í‘œë³¸ì¶”ì¶œ()
+Public Sub MUS_Ç¥º»ÃßÃâ()
     Dim rng As Range
 
-    ' --- 1. ë¶„ì„ ë²”ìœ„ ì„ íƒ (í˜„ì¬ ì„ íƒì„ ê¸°ë³¸ê°’ìœ¼ë¡œ) ---
+    ' --- 1. ºĞ¼® ¹üÀ§ ¼±ÅÃ (ÇöÀç ¼±ÅÃÀ» ±âº»°ªÀ¸·Î) ---
     On Error Resume Next
     Set rng = Application.InputBox( _
-        "ë¶„ì„í•  ë°ì´í„° ë²”ìœ„ë¥¼ ì„ íƒí•˜ì„¸ìš” (ë§¨ ìœ—ì¤„ = ì œëª© í—¤ë” í¬í•¨).", _
-        "MUS - ë²”ìœ„ ì„ íƒ", Selection.Address, Type:=8)
+        "ºĞ¼®ÇÒ µ¥ÀÌÅÍ ¹üÀ§¸¦ ¼±ÅÃÇÏ¼¼¿ä (¸Ç À­ÁÙ = Á¦¸ñ Çì´õ Æ÷ÇÔ).", _
+        "MUS - ¹üÀ§ ¼±ÅÃ", Selection.Address, Type:=8)
     On Error GoTo 0
-    If rng Is Nothing Then Exit Sub   ' ì·¨ì†Œ
+    If rng Is Nothing Then Exit Sub   ' Ãë¼Ò
 
     Dim data As Variant
     data = rng.Value
     If Not IsArray(data) Then
-        MsgBox "ë²”ìœ„ë¥¼ ë” ë„“ê²Œ(ì—¬ëŸ¬ í–‰) ì„ íƒí•˜ì„¸ìš”.", vbExclamation: Exit Sub
+        MsgBox "¹üÀ§¸¦ ´õ ³Ğ°Ô(¿©·¯ Çà) ¼±ÅÃÇÏ¼¼¿ä.", vbExclamation: Exit Sub
     End If
 
     Dim nRows As Long, nCols As Long
     nRows = UBound(data, 1)
     nCols = UBound(data, 2)
     If nRows < 2 Then
-        MsgBox "í—¤ë”í–‰ + ë°ì´í„°í–‰ì´ ìµœì†Œ 2í–‰ í•„ìš”í•©ë‹ˆë‹¤.", vbExclamation: Exit Sub
+        MsgBox "Çì´õÇà + µ¥ÀÌÅÍÇàÀÌ ÃÖ¼Ò 2Çà ÇÊ¿äÇÕ´Ï´Ù.", vbExclamation: Exit Sub
     End If
 
-    ' --- 2. ê¸ˆì•¡ì—´ ì„ íƒ (í—¤ë” ëª©ë¡ -> ë²ˆí˜¸ ì…ë ¥) ---
+    ' --- 2. ±İ¾×¿­ ¼±ÅÃ (Çì´õ ¸ñ·Ï -> ¹øÈ£ ÀÔ·Â) ---
     Dim headers As String, c As Long
     For c = 1 To nCols
         headers = headers & c & ".  " & data(1, c) & vbCrLf
     Next c
     Dim s As String
-    s = InputBox("ê¸ˆì•¡ì—´ 'ë²ˆí˜¸'ë¥¼ ì…ë ¥í•˜ì„¸ìš”:" & vbCrLf & vbCrLf & headers, "MUS - ê¸ˆì•¡ì—´")
+    s = InputBox("±İ¾×¿­ '¹øÈ£'¸¦ ÀÔ·ÂÇÏ¼¼¿ä:" & vbCrLf & vbCrLf & headers, "MUS - ±İ¾×¿­")
     If Not IsNumeric(s) Then Exit Sub
     Dim amtCol As Long: amtCol = CLng(s)
     If amtCol < 1 Or amtCol > nCols Then
-        MsgBox "1 ~ " & nCols & " ì‚¬ì´ì˜ ë²ˆí˜¸ë¥¼ ì…ë ¥í•˜ì„¸ìš”.", vbExclamation: Exit Sub
+        MsgBox "1 ~ " & nCols & " »çÀÌÀÇ ¹øÈ£¸¦ ÀÔ·ÂÇÏ¼¼¿ä.", vbExclamation: Exit Sub
     End If
 
-    ' --- 3. PM / ì‹ ë¢°ìˆ˜ì¤€ / ì‹œë“œ ---
-    s = InputBox("ìˆ˜í–‰ì¤‘ìš”ì„± (PM) ê¸ˆì•¡:", "MUS - PM", "1000000")
+    ' --- 3. PM / ½Å·Ú¼öÁØ / ½Ãµå ---
+    s = InputBox("¼öÇàÁß¿ä¼º (PM) ±İ¾×:", "MUS - PM", "1000000")
     If Not IsNumeric(s) Then Exit Sub
     Dim pm As Double: pm = CDbl(s)
-    If pm <= 0 Then MsgBox "PM ì€ ì–‘ìˆ˜ì—¬ì•¼ í•©ë‹ˆë‹¤.", vbExclamation: Exit Sub
+    If pm <= 0 Then MsgBox "PM Àº ¾ç¼ö¿©¾ß ÇÕ´Ï´Ù.", vbExclamation: Exit Sub
 
-    s = InputBox("ì‹ ë¢°ìˆ˜ì¤€ (0.90 / 0.95 / 0.99):", "MUS - ì‹ ë¢°ìˆ˜ì¤€", "0.95")
+    s = InputBox("½Å·Ú¼öÁØ (0.90 / 0.95 / 0.99):", "MUS - ½Å·Ú¼öÁØ", "0.95")
     If Not IsNumeric(s) Then Exit Sub
     Dim conf As Double: conf = CDbl(s)
     If conf < 0.5 Then conf = 0.5
     If conf > 0.999 Then conf = 0.999
 
-    s = InputBox("ì‹œë“œ (ì¬í˜„ìš© ìˆ«ì - ê°™ì€ ì‹œë“œ = ê°™ì€ í‘œë³¸):", "MUS - ì‹œë“œ", "42")
+    s = InputBox("½Ãµå (ÀçÇö¿ë ¼ıÀÚ - °°Àº ½Ãµå = °°Àº Ç¥º»):", "MUS - ½Ãµå", "42")
     If Not IsNumeric(s) Then Exit Sub
     Dim seed As Double: seed = CDbl(s)
 
     ' --- 4. R-factor / interval ---
     Dim interval As Double
-    interval = pm / (-Log(1# - conf))          ' VBA Log = ìì—°ë¡œê·¸(ln)
+    interval = pm / (-Log(1# - conf))          ' VBA Log = ÀÚ¿¬·Î±×(ln)
 
-    ' --- 5. ëª¨ì§‘ë‹¨(ì–‘ìˆ˜)ì—ì„œ Key Item / PPS ë¶„ë¦¬ ---
+    ' --- 5. ¸ğÁı´Ü(¾ç¼ö)¿¡¼­ Key Item / PPS ºĞ¸® ---
     Dim keyIdx() As Long, ppsIdx() As Long, ppsAmt() As Double
     Dim nKey As Long, nPps As Long, i As Long
     ReDim keyIdx(1 To nRows): ReDim ppsIdx(1 To nRows): ReDim ppsAmt(1 To nRows)
 
-    For i = 2 To nRows                          ' 2í–‰ë¶€í„° = ë°ì´í„°
+    For i = 2 To nRows                          ' 2ÇàºÎÅÍ = µ¥ÀÌÅÍ
         If IsNumeric(data(i, amtCol)) Then
             Dim a As Double: a = CDbl(data(i, amtCol))
             If a > 0 Then
@@ -91,14 +91,14 @@ Public Sub MUS_í‘œë³¸ì¶”ì¶œ()
         End If
     Next i
 
-    ' --- 6. ì„ íƒ ëˆ„ì : Key Item ì „ìˆ˜ ë¨¼ì € ---
+    ' --- 6. ¼±ÅÃ ´©Àû: Key Item Àü¼ö ¸ÕÀú ---
     Dim selRow() As Long, selType() As String, nSel As Long
     ReDim selRow(1 To nRows): ReDim selType(1 To nRows)
     For i = 1 To nKey
         nSel = nSel + 1: selRow(nSel) = keyIdx(i): selType(nSel) = "Key Item"
     Next i
 
-    ' --- 7. PPS ì²´ê³„ì  ì¶”ì¶œ ---
+    ' --- 7. PPS Ã¼°èÀû ÃßÃâ ---
     If nPps > 0 Then
         Dim cum() As Double, total As Double
         ReDim cum(1 To nPps)
@@ -106,7 +106,7 @@ Public Sub MUS_í‘œë³¸ì¶”ì¶œ()
             total = total + ppsAmt(i): cum(i) = total
         Next i
 
-        ' ê²°ì •ë¡  ì‹œì‘ì : ì‹œë“œ ê³ ì • -> ì¬í˜„ ê°€ëŠ¥.
+        ' °áÁ¤·Ğ ½ÃÀÛÁ¡: ½Ãµå °íÁ¤ -> ÀçÇö °¡´É.
         Rnd -1
         Randomize seed
         Dim start As Double
@@ -119,7 +119,7 @@ Public Sub MUS_í‘œë³¸ì¶”ì¶œ()
         For j = 0 To cnt - 1
             Dim point As Double: point = start + j * interval
             idx = 0
-            For i = 1 To nPps                   ' ì²« cum >= point
+            For i = 1 To nPps                   ' Ã¹ cum >= point
                 If cum(i) >= point Then idx = i: Exit For
             Next i
             If idx >= 1 And idx <> last Then
@@ -131,14 +131,14 @@ Public Sub MUS_í‘œë³¸ì¶”ì¶œ()
     End If
 
     If nSel = 0 Then
-        MsgBox "ì„ íƒëœ í‘œë³¸ì´ ì—†ìŠµë‹ˆë‹¤. PM / ê¸ˆì•¡ì—´ì„ í™•ì¸í•˜ì„¸ìš”.", vbExclamation: Exit Sub
+        MsgBox "¼±ÅÃµÈ Ç¥º»ÀÌ ¾ø½À´Ï´Ù. PM / ±İ¾×¿­À» È®ÀÎÇÏ¼¼¿ä.", vbExclamation: Exit Sub
     End If
 
-    ' --- 8. ìƒˆ ì‹œíŠ¸ì— ì¶œë ¥ (ì›ë³¸ì—´ + Type/Book_Value/Audit_Value) ---
+    ' --- 8. »õ ½ÃÆ®¿¡ Ãâ·Â (¿øº»¿­ + Type/Book_Value/Audit_Value) ---
     Dim ws As Worksheet
     Set ws = ThisWorkbook.Worksheets.Add
     On Error Resume Next
-    ws.Name = "MUS " & Format(conf * 100, "0") & "% s" & seed   ' ì‹œë“œ ë°•íŒ ì‹œíŠ¸ëª…
+    ws.Name = "MUS " & Format(conf * 100, "0") & "% s" & seed   ' ½Ãµå ¹ÚÈù ½ÃÆ®¸í
     On Error GoTo 0
 
     For c = 1 To nCols
@@ -155,12 +155,12 @@ Public Sub MUS_í‘œë³¸ì¶”ì¶œ()
             ws.Cells(r + 1, c).Value = data(srcRow, c)
         Next c
         ws.Cells(r + 1, nCols + 1).Value = selType(r)
-        ws.Cells(r + 1, nCols + 2).Value = data(srcRow, amtCol)  ' ì¥ë¶€ê°€
-        ws.Cells(r + 1, nCols + 3).Value = data(srcRow, amtCol)  ' ê°ì‚¬ê°€(=ì¥ë¶€ê°€, ì´í›„ ìˆ˜ì •)
+        ws.Cells(r + 1, nCols + 2).Value = data(srcRow, amtCol)  ' ÀåºÎ°¡
+        ws.Cells(r + 1, nCols + 3).Value = data(srcRow, amtCol)  ' °¨»ç°¡(=ÀåºÎ°¡, ÀÌÈÄ ¼öÁ¤)
     Next r
     ws.Columns.AutoFit
 
-    MsgBox "í‘œë³¸ " & nSel & "ê±´ ì¶”ì¶œ ì™„ë£Œ." & vbCrLf & _
+    MsgBox "Ç¥º» " & nSel & "°Ç ÃßÃâ ¿Ï·á." & vbCrLf & _
            "Key Item: " & nKey & "  /  PPS: " & (nSel - nKey) & vbCrLf & _
-           "ê²°ê³¼ ì‹œíŠ¸: " & ws.Name, vbInformation, "axon MUS"
+           "°á°ú ½ÃÆ®: " & ws.Name, vbInformation, "axon MUS"
 End Sub
